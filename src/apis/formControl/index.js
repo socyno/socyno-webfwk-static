@@ -54,7 +54,7 @@ export function create(formName, formAction, data) {
 // 获取预定义表单的结构数据
 export function getConstruction(formTypeKey) {
   return request({
-    url: `/form/form/${formTypeKey}/construction`,
+    url: `/form/${formTypeKey}/construction`,
     method: 'get'
   })
 }
@@ -121,7 +121,7 @@ export function getPrepareField(formName, formId, formAction) {
 // 获取所有的已注册通用流程单
 export function getFormList() {
   return request({
-    url: `/form/form/list`,
+    url: `/form/setup/list`,
     method: 'get'
   })
 }
@@ -129,7 +129,7 @@ export function getFormList() {
 // 注册通用流程单
 export function addForm(data) {
   return request({
-    url: `/form/form/add`,
+    url: `/form/setup/add`,
     method: 'post',
     data
   })
@@ -138,7 +138,7 @@ export function addForm(data) {
 // 修改通用流程单
 export function updateForm(data) {
   return request({
-    url: `/form/form/update`,
+    url: `/form/setup/update`,
     method: 'post',
     data
   })
@@ -147,7 +147,7 @@ export function updateForm(data) {
 // 禁用/启动通用流程单
 export function disabledForm(formName) {
   return request({
-    url: `/form/form/toggle/${formName}`,
+    url: `/form/setup/toggle/${formName}`,
     method: 'post'
   })
 }
@@ -155,7 +155,7 @@ export function disabledForm(formName) {
 // 删除通用流程单
 export function deleteForm(formName) {
   return request({
-    url: `/form/form/delete/${formName}`,
+    url: `/form/setup/delete/${formName}`,
     method: 'post'
   })
 }
@@ -163,7 +163,7 @@ export function deleteForm(formName) {
 // 获取显示/编辑界面的排版定义数据
 export function getViewattrs(formName, formTypeKey) {
   return request({
-    url: `/form/form/${formName}/${formTypeKey}/viewattrs`,
+    url: `/form/setup/${formTypeKey}/viewattrs`,
     method: 'get'
   })
 }
@@ -171,7 +171,7 @@ export function getViewattrs(formName, formTypeKey) {
 // 检查或预览显示/编辑界面的排版定义数据
 export function previewViewattrs(formName, formTypeKey, data) {
   return request({
-    url: `/form/form/${formName}/${formTypeKey}/viewattrs/preview`,
+    url: `/form/setup/${formTypeKey}/viewattrs/preview`,
     method: 'post',
     data
   })
@@ -180,7 +180,7 @@ export function previewViewattrs(formName, formTypeKey, data) {
 // 更新显示/编辑界面的排版定义数据
 export function updateViewattrs(formName, formTypeKey, data) {
   return request({
-    url: `/form/form/${formName}/${formTypeKey}/viewattrs/update`,
+    url: `/form/setup/${formTypeKey}/viewattrs/update`,
     method: 'post',
     data
   })
@@ -189,7 +189,7 @@ export function updateViewattrs(formName, formTypeKey, data) {
 // 获取关联的视图界面列表
 export function getExtraviews(formName) {
   return request({
-    url: `/form/form/${formName}/extraviews`,
+    url: `/form/setup/${formName}/extraviews`,
     method: 'get'
   })
 }
@@ -197,7 +197,7 @@ export function getExtraviews(formName) {
 // 添加或更新关联的视图界面列表
 export function updateExtraviews(formName, data) {
   return request({
-    url: `/form/form/${formName}/extraviews/update`,
+    url: `/form/setup/${formName}/extraviews/update`,
     method: 'post',
     data
   })
@@ -206,7 +206,7 @@ export function updateExtraviews(formName, data) {
 // 获取关联的视图界面配置列表
 export function getExtraviewsDefinition(formName) {
   return request({
-    url: `/form/form/${formName}/extraviews/definition`,
+    url: `/form/setup/${formName}/extraviews/details`,
     method: 'get'
   })
 }

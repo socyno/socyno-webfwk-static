@@ -38,6 +38,7 @@ service.interceptors.response.use((response) => {
   if (response.data.status === 401) {
     Message.error('未登录或已过期，请重新登录')
     store.dispatch('user/staticLogout')
+    return Promise.reject(response.data)
   }
   if (response.data.status !== 0) {
     Message.error('请求响应异常: 响应状态 ' + (response.data.status || response.status) +

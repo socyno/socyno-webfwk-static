@@ -27,9 +27,6 @@
           <el-button type="text" size="small">
             <a :href="`#/form/setup/${scope.row.formName}`">设置</a>
           </el-button>
-          <!-- <el-button type="text" size="small" @click="disabledClick(scope.row.disabled,scope.row.formName)">
-            {{ scope.row.disabled?'启用':'禁用' }}
-          </el-button> -->
           <el-button type="text" size="small" @click="updataClick(scope.row)">
             修改
           </el-button>
@@ -49,7 +46,7 @@
         </el-form-item>
         <el-form-item label="后端服务：" prop="formBackend">
           <el-select v-model="addParam.formBackend" placeholder="请选择后端服务">
-            <el-option label="backend" value="backend" />
+            <el-option label="backend" value="default" />
           </el-select>
         </el-form-item>
         <el-form-item label="服务类：" prop="formService">

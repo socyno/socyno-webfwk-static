@@ -32,32 +32,32 @@ export function login(username, password, proxied, token) {
   })
 }
 
-export function getTodoListClosed(data) {
+export function getTodoList() {
   return request({
-    url: 'user/mytodo/closed',
-    method: 'get',
-    params: data
+    url: 'user/todo/opend/list',
+    method: 'get'
+  })
+}
+
+export function getTodoCount() {
+  return request({
+    url: 'user/todo/opened/total',
+    method: 'get'
   })
 }
 
 export function getTodoListCreated(data) {
   return request({
-    url: 'user/mytodo/created',
+    url: 'user/todo/created/list',
     method: 'get',
     params: data
   })
 }
 
-export function getTodoList() {
+export function getTodoListClosed(data) {
   return request({
-    url: 'user/mytodo/list',
-    method: 'get'
-  })
-}
-
-export function getTodoCount(data) {
-  return request({
-    url: 'user/mytodo/total',
-    method: 'get'
+    url: 'user/todo/closed/list',
+    method: 'get',
+    params: data
   })
 }
