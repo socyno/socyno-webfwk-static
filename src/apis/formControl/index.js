@@ -34,14 +34,6 @@ export function getDateil(formName, formId) {
   })
 }
 
-// 查询流程单详情(返回当前可执行操作)
-export function getDateilWithActions(formName, formId) {
-  return request({
-    url: `/form/get/${formName}/${formId}/withActions`,
-    method: 'get'
-  })
-}
-
 // 执行表单创建事件
 export function create(formName, formAction, data) {
   return request({

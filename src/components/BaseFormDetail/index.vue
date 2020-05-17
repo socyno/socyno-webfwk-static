@@ -85,9 +85,6 @@ export default {
       )
     }
   },
-  mounted() {
-    this.initAction()
-  },
   methods: {
     getFieldValue(item, value) {
       if (getFieldType(item) === 'select') {
@@ -104,20 +101,6 @@ export default {
       }
       return value
     },
-    initAction() {
-      // if (this.actionNames) {
-      //   var item = this.actions.filter(t => t.name === this.actionNames)
-      //   if (item && item.length > 0) {
-      //     var temp = item[0]
-      //     this.clickedAction = temp.name
-      //     this.auditFormClass(temp)
-      //     this.showConfirm = temp.confirmRequired
-      //     // this.dialogActionVisible = true
-      //   } else {
-      //     this.$message.warning('该操作已完成或不存在')
-      //   }
-      // }
-    },
     parseFormClassToObj(formClassStr) {
       var formClass = {}
       try {
@@ -133,12 +116,12 @@ export default {
       }
       return formClass
     },
-    actionClick(item) {
-      this.actionNames = item.name
-      this.clickedAction = item
-      this.showConfirm = item.confirmRequired
-      this.auditFormClass(item)
-      this.$emit('toAction', item.name)
+    actionClick(action) {
+      this.clickedAction = action
+      this.actionNames = action.name
+      this.showConfirm = action.confirmRequired
+      this.auditFormClass(action)
+      this.$emit('toAction', action.name)
     },
     /**
      * 处理formclass
@@ -169,7 +152,7 @@ export default {
           // 手动注入个message
           type: 'string',
           title: '说明',
-          fieldType: 'TEXT',
+          fieldType: 'text',
           fieldTypeKey: '',
           fieldOptionsType: 'NULL',
           readonly: false,

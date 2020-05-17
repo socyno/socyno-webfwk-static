@@ -2,12 +2,10 @@
   <div class="form-log">
     <!-- <el-page-header class="common-page-header" :content="headerPrefix + '日志'" @back="handleBack" /> -->
     <el-table v-loading="loading" :data="tableData" border>
-      <el-table-column label="表单ID" prop="objectId" />
-      <el-table-column label="日志ID" prop="operateDetailId" />
-      <el-table-column label="表单名称" prop="objectType" />
-      <el-table-column label="操作类型" prop="operateType" />
-      <el-table-column label="操作人" prop="operateUserName" />
       <el-table-column label="操作时间" prop="operateTime" />
+      <el-table-column label="操作人姓名" prop="operateUserDisplay" />
+      <el-table-column label="操作类型" prop="operateType" />
+      <el-table-column label="操作备注" prop="operateDesc" />
       <el-table-column label="操作" width="80">
         <template slot-scope="scope">
           <el-button v-if="scope.row.operateDetailId" type="text" size="small" @click="operateClick(scope.row.operateDetailId)">

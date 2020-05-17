@@ -2,16 +2,19 @@
   <div class="detail">
     <el-page-header class="common-page-header" :title="getPageHeaderTitle()" :content="headerPrefix + '详情信息'" @back="onGoBack" />
     <el-tabs v-model="currentTab" class="detail-tabs" type="card">
-      <el-tab-pane v-if="relyObj" label="详情信息">
-        <FormDetail ref="formDetail" :form-id="formId" :form-name="formName" :action-name="action" :rely-field="relyField" :rely-obj="relyObj" @submitForm="submitForm" @toAction="toAction" />
+      <el-tab-pane v-if="formData" label="详情信息">
+        <FormDetail ref="formDetail" :form-id="formId" :form-name="formName" :action-name="action" :rely-field="formData.formClass.properties" :rely-obj="formData" @submitForm="submitForm" @toAction="toAction" />
       </el-tab-pane>
-      <el-tab-pane v-if="relyObj" label="备注">
+      <el-tab-pane v-if="formData" label="备注">
         <Comments :data="commentsData" />
       </el-tab-pane>
-      <el-tab-pane v-if="relyObj" label="日志">
+      <el-tab-pane v-if="formData" label="日志">
         <Logs v-if="currentTab === '2'" />
       </el-tab-pane>
     </el-tabs>
+    <!--
+      当操作事件响应未 SimpleView 时，使用以下的弹窗进行展示
+    -->
     <el-dialog
       :title="'详情信息'"
       :visible.sync="callbackViewVisable"
@@ -19,13 +22,13 @@
       append-to-body
       @closed="onCallbackDialogClose"
     >
-      <BaseFormDetailGenerator :columns="simpleViewFormClass" :detail-data="relyObj" />
+      <BaseFormDetailGenerator :columns="simpleViewFormClass" :detail-data="formData" />
     </el-dialog>
   </div>
 </template>
 <script>
 import { Loading } from 'element-ui'
-import * as API from '@/apis/formControl/index'
+import FormApi from '@/apis/formApi'
 import FormDetail from '../../components/BaseFormDetail/index'
 import Comments from '../../components/BaseFormItem/Comments'
 import BaseFormDetailGenerator from '../../components/BaseFormDetailGenerator/index'
@@ -38,8 +41,11 @@ export default {
       formId: this.$route.query.formId,
       formName: this.$route.query.formName,
       action: this.$route.query.action || '',
-      relyObj: null,
-      relyField: null,
+      formData: {
+        form: {},
+        actions: [],
+        formClass: {}
+      },
       headerPrefix: '',
       commentsData: [],
       callbackViewVisable: false,
@@ -51,12 +57,14 @@ export default {
     '$route'(to, from) {
       this.formName = to.query.formName
       this.formId = to.query.formId
-      this.relyObj = null
-      this.getById()
+      this.formApi = new FormApi(this.formName)
+      this.formData = null
+      this.loadFormData()
     }
   },
-  mounted() {
-    this.getById()
+  created() {
+    this.formApi = new FormApi(this.formName)
+    this.loadFormData()
   },
   methods: {
     getPageHeaderTitle() {
@@ -70,29 +78,25 @@ export default {
       }
     },
     onCallbackDialogClose() {
-      this.getById()
+      this.loadFormData()
       this.socketObj.close()
     },
-    getById() {
-      var loadObj = Loading.service({
+    loadFormData() {
+      var loading = Loading.service({
         fullscreen: true
       })
-      API.getDateilWithActions(this.formName, this.formId).then(res => {
-        loadObj.close()
-
-        this.relyObj = res.data
-        this.relyField = JSON.parse(res.data.formClass).properties
-        this.headerPrefix = res.display ? res.display + ' - ' : ''
+      this.formApi.loadFormEntry(this.formId).then(detail => {
+        this.formData = detail
       }).catch(e => {
-        loadObj.close()
         this.$message.error('请求失败' + e.message)
+      }).finally(res => {
+        loading.close()
       })
-      API.getComments(this.formName, this.formId).then(res => {
+      this.formApi.loadComments(this.formName, this.formId).then(res => {
         this.commentsData = res.data
       })
     },
     toAction(actionName) {
-      // this.$router.push({ path: '/form/detail', query: { formId: this.formId, formName: this.formName, action: actionName }})
       this.addParamsToLocation({ formId: this.formId, formName: this.formName, action: actionName })
     },
     addParamsToLocation(params) {
@@ -115,7 +119,7 @@ export default {
       //   fullscreen: true
       // })
       this.$refs.formDetail.isSubmitting = true
-      API.trigger(this.formName, reslut.action, { form: reslut.formData, message: reslut.message }).then(res => {
+      this.formApi.postTrigger(this.formName, reslut.action, { form: reslut.formData, message: reslut.message }).then(res => {
         // loadObj.close()
         this.$refs.formDetail.dialogActionVisible = false
         this.$refs.formDetail.isSubmitting = false
@@ -134,7 +138,7 @@ export default {
           var lct = this.$router.resolve({ path: '/form/result/' + res.data.eventResultViewType, query: { arg: window.$encodeResultPageArg(res.data) }})
           window.open(lct.href, '_blank')
         } else {
-          this.getById()
+          this.loadFormData()
         }
       }).catch(e => {
         this.$refs.formDetail.isSubmitting = false
@@ -151,4 +155,3 @@ export default {
   }
 }
 </style>
-

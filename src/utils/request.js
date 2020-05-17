@@ -1,7 +1,5 @@
 import axios from 'axios'
-import {
-  Message
-} from 'element-ui'
+import { Message } from 'element-ui'
 import store from '@/store'
 
 // 创建axios实例
@@ -29,8 +27,10 @@ service.interceptors.request.use((config) => {
   return Promise.reject(error)
 })
 
-// respone拦截器
-service.interceptors.response.use((response) => {
+var checkResonse = function(response) {
+  if (response.response) {
+    response = response.response
+  }
   if (!response.data) {
     Message.error('请求响应异常: 响应状态 ' + response.status + ' - ' + response.statusText)
     return Promise.reject(response.data)
@@ -46,14 +46,8 @@ service.interceptors.response.use((response) => {
     return Promise.reject(response.data)
   }
   return Promise.resolve(response.data)
-}, (error) => {
-  if (error.message) {
-    // 登录超时
-    if (error.message === 'Network Error') {
-      Message.error('网络错误，请检查你的网络')
-    }
-  }
-  return Promise.reject(error)
-})
+}
 
+// respone拦截器
+service.interceptors.response.use(checkResonse, checkResonse)
 export default service

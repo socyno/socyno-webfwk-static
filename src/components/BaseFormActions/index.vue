@@ -3,9 +3,9 @@
     <el-button v-for="(item, idx) in temp" :key="idx" type="primary" size="mini" round @click="onButtonClick(item)">
       {{ item.display }}
     </el-button>
-    <el-button v-if="exportbtn" type="primary" size="mini" round @click="onExportClick">
+    <!--    <el-button v-if="exportbtn" type="primary" size="mini" round @click="onExportClick">
       导出Excel
-    </el-button>
+    </el-button> -->
   </div>
 </template>
 <script>

@@ -19,7 +19,7 @@ const tool = {
   },
 
   isNull(data) {
-    return typeof (data) === 'object' ? !data : false
+    return data === null
   },
 
   /* check null or undefined */
@@ -29,7 +29,7 @@ const tool = {
 
   /* force to string */
   stringify(str) {
-    if (this.isNull(str) || this.isUndef(str)) {
+    if (this.isUndefOrNull(str)) {
       return ''
     }
     return '' + str

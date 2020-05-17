@@ -8,18 +8,21 @@
             <el-form v-if="queriesTab.data" label-position="right" style="width: 100%;" label-width="200px" class="demo-form-inline">
               <el-form-item v-for="(item, key, index) in queriesTab.data" :key="'sx'+index" :label="`${ key }：`" :prop="key">
                 <i v-if="addFieldFix.test(key)" size="mini" class="el-icon-delete" @click="deleteAddField('queriesTab',key)" />
-                <span>名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
-                <span>序号：</span><el-input v-model="item.position" type="number" class="width90" />
-                <span>描述：</span><el-input v-model="item.description" class="width180" />
-                <span>分组：</span><el-input v-model="item.group" class="width150" />
+                <span class="field-name">名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
+                <span class="field-name">序号：</span><el-input v-model="item.position" type="number" class="width90" />
+                <span class="field-name">分组：</span><el-input v-model="item.group" class="width150" />
                 <span v-for="(itema, keya, indexa) in item" :key="'sxzx'+indexa">
                   <span v-if="fixedField.indexOf(keya)<0">
-                    <span>{{ keya }}：</span>
+                    <span class="field-name">{{ keya }}：</span>
                     <el-input v-model="item[keya]" class="width150" />
                     <i size="mini" class="el-icon-delete" @click="deleField('queriesTab',key,keya)" />
                   </span>
                 </span>
                 <i class="el-icon-circle-plus addBtn" @click="addField(true,key,'queriesTab')" />
+                <div>
+                  <span class="field-name">描述：</span>
+                  <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
+                </div>
               </el-form-item>
               <el-form-item label>
                 <i class="el-icon-plus addBtn" @click="addField(true,'','queriesTab',false)" />
@@ -38,20 +41,23 @@
             <el-form label-position="right" style="width: 100%;" label-width="200px" class="demo-form-inline">
               <el-form-item v-for="(item, key, index) in tableTab.data" :key="'lb'+index" :label="`${ key }：`" :prop="key">
                 <i v-if="addFieldFix.test(key)" size="mini" class="el-icon-delete" @click="deleteAddField('tableTab',key)" />
-                <span>名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
-                <span>序号：</span><el-input v-model="item.position" type="number" class="width90" />
-                <span>描述：</span><el-input v-model="item.description" class="width180" />
-                <span>分组：</span><el-input v-model="item.group" class="width150" />
-                <span>模板：</span><el-input v-model="item.template" class="width90" />
+                <span class="field-name">名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
+                <span class="field-name">序号：</span><el-input v-model="item.position" type="number" class="width90" />
+                <span class="field-name">分组：</span><el-input v-model="item.group" class="width150" />
+                <span class="field-name">模板：</span><el-input v-model="item.template" class="width90" />
                 <span v-for="(itema, keya, indexa) in item" :key="'lbzx'+indexa">
                   <span v-if="fixedField.indexOf(keya)<0">
-                    <span>{{ keya }}：</span>
+                    <span class="field-name">{{ keya }}：</span>
                     <el-input v-model="item[keya]" class="width150" />
                     <i size="mini" class="el-icon-delete" @click="deleField('tableTab',key,keya)" />
                   </span>
                 </span>
                 <i class="el-icon-edit addBtn" @click="addTemplate(true,key,'tableTab')" />
                 <i class="el-icon-circle-plus addBtn" @click="addField(true,key,'tableTab')" />
+                <div>
+                  <span class="field-name">描述：</span>
+                  <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
+                </div>
               </el-form-item>
               <el-form-item label>
                 <i class="el-icon-plus addBtn" @click="addField(true,'','tableTab',false)" />
@@ -73,14 +79,13 @@
         <el-form label-position="right" style="width: 90%;" label-width="200px" class="demo-form-inline">
           <el-form-item v-for="(item, key, index) in formTab.data" :key="'bd'+index" :label="`${ key }：`" :prop="key">
             <i v-if="addFieldFix.test(key)" size="mini" class="el-icon-delete" @click="deleteAddField('formTab',key)" />
-            <span>名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
-            <span>序号：</span><el-input v-model="item.position" type="number" class="width90" />
-            <span>描述：</span><el-input v-model="item.description" class="width180" />
-            <span>分组：</span><el-input v-model="item.group" class="width150" />
-            <span>模板：</span><el-input v-model="item.template" class="width90" />
+            <span class="field-name">名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
+            <span class="field-name">序号：</span><el-input v-model="item.position" type="number" class="width90" />
+            <span class="field-name">分组：</span><el-input v-model="item.group" class="width150" />
+            <span class="field-name">模板：</span><el-input v-model="item.template" class="width90" />
             <span v-for="(itema, keya, indexa) in item" :key="'bdzx'+indexa">
               <span v-if="fixedField.indexOf(keya)<0">
-                <span>{{ keya }}：</span>
+                <span class="field-name">{{ keya }}：</span>
                 <el-input v-model="item[keya]" class="width150" />
                 <i size="mini" class="el-icon-delete" @click="deleField('formTab',key,keya)" />
               </span>
@@ -90,6 +95,10 @@
             </el-button>
             <i class="el-icon-edit addBtn" @click="addTemplate(true,key,'formTab')" />
             <i class="el-icon-circle-plus addBtn" @click="addField(true,key,'formTab')" />
+            <div>
+              <span class="field-name">描述：</span>
+              <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
+            </div>
           </el-form-item>
           <el-form-item label>
             <i class="el-icon-plus addBtn" @click="addField(true,'','formTab',false)" />
@@ -129,13 +138,12 @@
 
               <el-form-item v-for="(itema, keya) in actionsObj['actions'+key].data" :key="'shj'+keya" :label="`${ keya }：`" :prop="keya">
                 <i v-if="addFieldFix.test(keya)" size="mini" class="el-icon-delete" @click="deleteAddField(`actionsObj${actionPrefix}actions${key}`,keya)" />
-                <span>名称：</span><el-input v-model="itema.title" style="width: 150px;" class="width150" />
-                <span>序号：</span><el-input v-model="itema.position" type="number" class="width90" />
-                <span>描述：</span><el-input v-model="itema.description" class="width180" />
-                <span>分组：</span><el-input v-model="itema.group" class="width150" />
+                <span class="field-name">名称：</span><el-input v-model="itema.title" style="width: 150px;" class="width150" />
+                <span class="field-name">序号：</span><el-input v-model="itema.position" type="number" class="width90" />
+                <span class="field-name">分组：</span><el-input v-model="itema.group" class="width150" />
                 <span v-for="(iteme, keye, indexe) in itema" :key="'sjzx'+indexe">
                   <span v-if="fixedField.indexOf(keye)<0">
-                    <span>{{ keye }}：</span>
+                    <span class="field-name">{{ keye }}：</span>
                     <el-input v-model="itema[keye]" class="width150" />
                     <i size="mini" class="el-icon-delete" @click="deleFixField(`actionsObj${actionPrefix}actions${key}`,keya,keye)" />
                   </span>
@@ -144,6 +152,10 @@
                   TV
                 </el-button>
                 <i class="el-icon-circle-plus addBtn" @click="addField(true,keya, `actionsObj${actionPrefix}actions${key}`)" />
+                <div>
+                  <span class="field-name">描述：</span>
+                  <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
+                </div>
               </el-form-item>
               <el-form-item label>
                 <i class="el-icon-plus addBtn" @click="addField(true,'',`actionsObj${actionPrefix}actions${key}`,false)" />
@@ -169,20 +181,23 @@
         <el-form v-if="showTabs" size="mini" label-position="right" style="width: 100%;" label-width="160px" class="demo-form-inline">
           <el-form-item v-for="(item, key, index) in tabObj['tab'+idex].data" :key="'sss'+index" :label="`${ key }：`" :prop="key">
             <i v-if="addFieldFix.test(key)" size="mini" class="el-icon-delete" @click="deleteAddField(`tabObj${actionPrefix}tab${idex}`,key)" />
-            <span>名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
-            <span>序号：</span><el-input v-model="item.position" type="number" class="width90" />
-            <span>描述：</span><el-input v-model="item.description" class="width180" />
-            <span>分组：</span><el-input v-model="item.group" class="width150" />
-            <span>模板：</span><el-input v-model="item.template" class="width90" />
+            <span class="field-name">名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
+            <span class="field-name">序号：</span><el-input v-model="item.position" type="number" class="width90" />
+            <span class="field-name">分组：</span><el-input v-model="item.group" class="width150" />
+            <span class="field-name">模板：</span><el-input v-model="item.template" class="width90" />
             <span v-for="(itema, keya, indexa) in item" :key="'diyzx'+indexa">
               <span v-if="fixedField.indexOf(keya)<0">
-                <span>{{ keya }}：</span>
+                <span class="field-name">{{ keya }}：</span>
                 <el-input v-model="item[keya]" class="width150" />
                 <i size="mini" class="el-icon-delete" @click="deleFixField(`tabObj${actionPrefix}tab${idex}`,key,keya)" />
               </span>
             </span>
             <i class="el-icon-edit addBtn" @click="addTemplate(true,key,`tabObj${actionPrefix}tab${idex}`)" />
             <i class="el-icon-circle-plus addBtn" @click="addField(true,key,`tabObj${actionPrefix}tab${idex}`)" />
+            <div>
+              <span class="field-name">描述：</span>
+              <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
+            </div>
           </el-form-item>
           <el-form-item label>
             <i class="el-icon-plus addBtn" @click="addField(true,'',`tabObj${actionPrefix}tab${idex}`,false)" />
@@ -241,20 +256,23 @@
     <el-dialog title="TableView配置" :modal-append-to-body="false" :close-on-click-modal="false" :visible.sync="tableViewVisible" width="80%">
       <el-form v-if="tableViewTab" label-position="right" style="width: 90%;" label-width="200px" class="demo-form-inline">
         <el-form-item v-for="(itema, keya) in tableViewTab.data" :key="'tw'+keya" :label="`${ keya }：`" :prop="keya">
-          <span>名称：</span><el-input v-model="itema.title" style="width: 150px;" class="width150" />
-          <span>序号：</span><el-input v-model="itema.position" type="number" class="width90" />
-          <span>描述：</span><el-input v-model="itema.description" class="width180" />
-          <span>分组：</span><el-input v-model="itema.group" class="width150" />
-          <span>模板：</span><el-input v-model="itema.template" class="width90" />
+          <span class="field-name">名称：</span><el-input v-model="itema.title" style="width: 150px;" class="width150" />
+          <span class="field-name">序号：</span><el-input v-model="itema.position" type="number" class="width90" />
+          <span class="field-name">分组：</span><el-input v-model="itema.group" class="width150" />
+          <span class="field-name">模板：</span><el-input v-model="itema.template" class="width90" />
           <span v-for="(iteme, keye, indexe) in itema" :key="'twzx'+indexe">
             <span v-if="fixedField.indexOf(keye)<0">
-              <span>{{ keye }}：</span>
+              <span class="field-name">{{ keye }}：</span>
               <el-input v-model="itema[keye]" class="width150" />
               <i size="mini" class="el-icon-delete" @click="deleField('tableViewTab',keya,keye)" />
             </span>
           </span>
           <i class="el-icon-edit addBtn" @click="addTemplate(true,keya,'tableViewTab')" />
           <i class="el-icon-circle-plus addBtn" @click="addField(true,keya, 'tableViewTab')" />
+          <div>
+            <span class="field-name">描述：</span>
+            <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
+          </div>
         </el-form-item>
         <el-form-item label style="margin-left:20px;">
           <el-button type="primary" size="small" @click="submitForm('tableViewTab')">
@@ -708,17 +726,25 @@ export default {
   .el-dialog__header{
     border-bottom: 1px solid #ddd;
   }
+  .field-name {
+    display: inline-block;
+    width: 50px !important;
+  }
   .el-input{
-      display: initial !important;
+    display: initial !important;
   }
   .width180 .el-input__inner{
-      width: 180px !important;
+    width: 180px !important;
   }
   .width150 .el-input__inner{
-      width: 150px !important;
+    width: 150px !important;
   }
   .width90 .el-input__inner{
-      width: 90px !important;
+    width: 90px !important;
+  }
+  .field-line {
+    display: inline-block;
+    width: calc(99% - 50px) !important;
   }
 }
 </style>

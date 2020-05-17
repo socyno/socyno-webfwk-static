@@ -1,7 +1,7 @@
 <template>
   <div class="form-detial-generator">
     <slot v-for="(o, k) in columnData" class="subitem">
-      <div v-if="o.fieldType === 'TEXT' || o.fieldType === 'TEXTLINE'" :key="k" class="row-line">
+      <div v-if="o.fieldType === 'text' || o.fieldType === 'textline'" :key="k" class="row-line">
         <div v-if="o.title" class="title">
           {{ o.title || '' }}：
         </div>
@@ -9,26 +9,26 @@
           {{ getDetail(o) }}
         </div>
       </div>
-      <div v-else-if="o.fieldType === 'File'" :key="k">
+      <div v-else-if="o.fieldType === 'file'" :key="k">
         <UploadDisplay :files="getDetail(o)" />
       </div>
-      <div v-else-if="o.fieldType === 'TextHtml'" :key="k" class="row-line">
+      <div v-else-if="o.fieldType === 'texthtml'" :key="k" class="row-line">
         <div v-if="o.title" class="title">
           {{ o.title }}：
         </div>
         <TemplateConfig :template="o.template" :options="o" :data="detailData" />
       </div>
 
-      <div v-else-if="o.fieldType === 'TableView' && o.type !== 'array'" :key="k" class="plain-text">
+      <div v-else-if="o.fieldType === 'tableview' && o.type !== 'array'" :key="k" class="plain-text">
         <span v-if="o.title" class="title">{{ o.title || '' }}：</span>
         {{ detailData[o.key] ? (detailData[o.key].optionDisplay || detailData[o.key]) : '' }}
       </div>
-      <div v-else-if="o.fieldType === 'TableView' && o.type === 'array'" :key="k" class="row-line">
+      <div v-else-if="o.fieldType === 'tableview' && o.type === 'array'" :key="k" class="row-line">
         <span v-if="o.title" class="title">{{ o.title }}：</span>
         <InviewTable :key="k" v-model="o.value" :data="o" :prepare-data="getTablePrepareData(o)" />
       </div>
       <BaseFormDetailTextDelta
-        v-else-if="o.fieldType === 'TextDelta'"
+        v-else-if="o.fieldType === 'textdelta'"
         :key="k"
         :messages="wsmessages"
         :item="o"
@@ -91,8 +91,9 @@ export default {
           newv = JSON.parse(newv)
           // console.log(newv)
         }
-
-        if (!newv.properties) return
+        if (!newv || !newv.properties) {
+          return
+        }
         var tempArr = []
         var keys = Object.keys(newv.properties)
         for (const iterator in keys) {
@@ -125,7 +126,7 @@ export default {
       if (this.detailData) {
         var lastMsg = this.detailData
         var retValue = ''
-        if (o.fieldType === 'Simple' && o.staticOptions) {
+        if (o.fieldType === 'string' && o.staticOptions) {
           for (const key in o.staticOptions) {
             if (o.staticOptions.hasOwnProperty(key)) {
               const element = o.staticOptions[key]

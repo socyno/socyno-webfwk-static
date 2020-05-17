@@ -185,54 +185,46 @@ export default {
     data: {
       immediate: true,
       handler(query) {
-        if (!query.type) {
+        if (!query || !query.type) {
           return
         }
         var tempArr = []
-
         for (const key in query.properties) {
           var item = query.properties[key]
-          if (!item.position || item.position <= 0 || !item.fieldType) {
+          // console.log('获取到的界面字段定义如下：' + key + ' => ')
+          // console.log(item)
+          if (!item.position || item.position <= 0) {
             continue
           }
-          // if (item.key === 'codeLevel') {
-          //   item.type = 'array'
-          // }
-
           switch (item.fieldType) {
-            case 'Simple':
-            case 'String':
-            case 'STRING':
-            case 'TEXTLINE':
-              if (item.fieldOptionsType === 'NULL' && item.type !== 'boolean') { // 这里用来区分短文本input或者动态/静态选择器
-                item.comType = 'input'
-              } else if (item.fieldOptionsType === 'DYNAMIC') {
-                item.comType = 'dynamicSelect'
-              } else if (item.type === 'boolean') { // CheckBox
-                item.comType = 'switch'
-              } else {
+            case '':
+            case 'simple':
+            case 'string':
+            case 'textline':
+              if (item.fieldOptionsType === 'STATIC') {
                 if (item.type === 'array' && item.staticOptions && item.staticOptions.length) {
                   item.comType = 'checkbox'
                 } else {
                   item.comType = 'select'
                 }
+              } else if (item.fieldOptionsType === 'DYNAMIC') {
+                item.comType = 'dynamicSelect'
+              } else if (item.type === 'boolean') {
+                item.comType = 'switch'
+              } else {
+                item.comType = 'input'
               }
               break
-            case 'PASSWORD':
+            case 'password':
               item.comType = 'password'
               break
-            case 'TEXT': // 长文本
+            case 'text': // 长文本
               item.comType = 'areaText'
               break
-            case 'File': // 文件上传
-              if (this.$route.name === 'Create') {
-                item.comType = 'file'
-              } else {
-                item.comType = 'fileList'
-              }
-
+            case 'file': // 文件上传
+              item.comType = 'file'
               break
-            case 'TableView':
+            case 'tableview':
               if (item.type === 'array') {
                 if (item.staticOptions && item.staticOptions.length) {
                   item.comType = 'checkbox'
@@ -243,19 +235,15 @@ export default {
                 item.comType = 'dynamicSelect'
               }
               break
-
-            case 'DateOnly':
+            case 'dateonly':
               item.comType = 'DateOnly'
               break
-
-            case 'DateTime':
+            case 'datetime':
               item.comType = 'DateTime'
               break
-
-            case 'TimeOnly':
+            case 'timeonly':
               item.comType = 'TimeOnly'
               break
-
             default:
               break
           }

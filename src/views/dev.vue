@@ -2,83 +2,50 @@
   <div>
     <div>
       <el-select
-        v-model="value"
+        v-model="type"
         filterable
-        remote
         reserve-keyword
-        placeholder="请输入关键词选择应用"
-        :remote-method="remoteMethod"
-        :loading="loading"
+        placeholder="请求类型"
       >
-        <el-option
-          v-for="item in list"
-          :key="item.id"
-          :label="item.name"
-          :value="item.id"
-        />
+        <el-option label="GET" value="get" />
+        <el-option label="POST" value="post" />
       </el-select>
-      <el-button @click="handleSyncVirtualAppInfo">
-        syncVirtualAppInfo
-      </el-button>
-      <el-button @click="handleSyncAppK8sInfo">
-        syncAppK8sInfo
+      <el-input v-model="url" placeholder="请求地址" />
+      <el-input v-model="params" :rows="5" type="textarea" placeholder="请求参数(JSON)" />
+      <el-button :loading="loading" @click="handleRequest">
+        发起请求
       </el-button>
     </div>
     <el-divider />
-    <div>
-      <el-button @click="handleSyncVirtualMachineAllAppInfo">
-        syncVirtualMachineAllAppInfo
-      </el-button>
-      <el-button @click="handleSyncAllAppK8sInfo">
-        syncAllAppK8sInfo
-      </el-button>
-    </div>
+    <div> {{ responseText }} </div>
   </div>
 </template>
 <script>
-import { getAppOptions } from '@/apis/application'
-import { syncVirtualAppInfo, syncVirtualMachineAllAppInfo, syncAppK8sInfo, syncAllAppK8sInfo } from '@/apis/devapi'
+import request from '@/utils/request'
 export default {
   data() {
     return {
-      value: [],
-      list: [],
+      type: 'get',
+      url: '',
+      params: '',
+      responseText: '',
       loading: false
-
     }
   },
   mounted() {
   },
   methods: {
-    remoteMethod(query) {
-      if (query !== '') {
-        this.loading = true
-        getAppOptions(query).then(res => {
-          this.loading = false
-          this.list = res.data
-        })
-      } else {
-        this.list = []
-      }
-    },
-    handleSyncVirtualAppInfo() {
-      syncVirtualAppInfo(this.value).then(res => {
-        this.$message.success('请求发送成功')
-      })
-    },
-    handleSyncVirtualMachineAllAppInfo() {
-      syncVirtualMachineAllAppInfo().then(res => {
-        this.$message.success('请求发送成功')
-      })
-    },
-    handleSyncAppK8sInfo() {
-      syncAppK8sInfo(this.value).then(res => {
-        this.$message.success('请求发送成功')
-      })
-    },
-    handleSyncAllAppK8sInfo() {
-      syncAllAppK8sInfo().then(res => {
-        this.$message.success('请求发送成功')
+    handleRequest() {
+      this.loading = true
+      this.responseText = ''
+      request({
+        url: this.url,
+        method: this.type,
+        params: JSON.parse(this.params || '{}')
+      }).then(res => {
+        this.responseText = JSON.stringify(res, null, 4)
+      }).finally(res => {
+        this.loading = false
       })
     }
   }
