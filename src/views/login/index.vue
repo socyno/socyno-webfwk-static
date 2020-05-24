@@ -3,7 +3,7 @@
     <canvas id="cas" />
     <div class="con">
       <div class="head">
-        <span class="title">简通流程管理系统</span>
+        <span class="title">{{ $jian.tool.title('系统登录') }}</span>
       </div>
       <div class="bg">
         <el-form ref="form01" class="formInp" label-position="right" :rules="rules" :model="param" @submit.native.prevent>
@@ -17,12 +17,7 @@
           </el-form-item>
           <div class="pwddiv">
             <el-form-item label>
-              <el-button
-                class="inp loginBtn"
-                native-type="submit"
-                type="primary"
-                @click="submitForm('form01')"
-              >
+              <el-button class="inp loginBtn" native-type="submit" type="primary" @click="submitForm('form01')">
                 登 录
               </el-button>
             </el-form-item>

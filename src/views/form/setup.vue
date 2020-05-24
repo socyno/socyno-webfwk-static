@@ -2,749 +2,519 @@
   <div class="form-setup">
     <el-page-header class="common-page-header" :content="'设置 “'+formTitle+'”'" @back="$router.go(-1)" />
     <el-tabs type="border-card">
-      <el-tab-pane label="查询配置">
+      <el-tab-pane key="'查询视图'" label="查询视图">
         <el-tabs type="border-card">
-          <el-tab-pane v-if="queriesTab" label="筛选配置">
-            <el-form v-if="queriesTab.data" label-position="right" style="width: 100%;" label-width="200px" class="demo-form-inline">
-              <el-form-item v-for="(item, key, index) in queriesTab.data" :key="'sx'+index" :label="`${ key }：`" :prop="key">
-                <i v-if="addFieldFix.test(key)" size="mini" class="el-icon-delete" @click="deleteAddField('queriesTab',key)" />
-                <span class="field-name">名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
-                <span class="field-name">序号：</span><el-input v-model="item.position" type="number" class="width90" />
-                <span class="field-name">分组：</span><el-input v-model="item.group" class="width150" />
-                <span v-for="(itema, keya, indexa) in item" :key="'sxzx'+indexa">
-                  <span v-if="fixedField.indexOf(keya)<0">
-                    <span class="field-name">{{ keya }}：</span>
-                    <el-input v-model="item[keya]" class="width150" />
-                    <i size="mini" class="el-icon-delete" @click="deleField('queriesTab',key,keya)" />
-                  </span>
-                </span>
-                <i class="el-icon-circle-plus addBtn" @click="addField(true,key,'queriesTab')" />
-                <div>
-                  <span class="field-name">描述：</span>
-                  <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
-                </div>
-              </el-form-item>
-              <el-form-item label>
-                <i class="el-icon-plus addBtn" @click="addField(true,'','queriesTab',false)" />
-              </el-form-item>
-              <el-form-item label>
-                <el-button type="primary" size="small" @click="submitForm('queriesTab')">
-                  保存
-                </el-button>
-                <el-button size="small" @click="$router.go(-1)">
-                  返回
-                </el-button>
-              </el-form-item>
-            </el-form>
-          </el-tab-pane>
-          <el-tab-pane v-if="tableTab" label="列表配置">
-            <el-form label-position="right" style="width: 100%;" label-width="200px" class="demo-form-inline">
-              <el-form-item v-for="(item, key, index) in tableTab.data" :key="'lb'+index" :label="`${ key }：`" :prop="key">
-                <i v-if="addFieldFix.test(key)" size="mini" class="el-icon-delete" @click="deleteAddField('tableTab',key)" />
-                <span class="field-name">名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
-                <span class="field-name">序号：</span><el-input v-model="item.position" type="number" class="width90" />
-                <span class="field-name">分组：</span><el-input v-model="item.group" class="width150" />
-                <span class="field-name">模板：</span><el-input v-model="item.template" class="width90" />
-                <span v-for="(itema, keya, indexa) in item" :key="'lbzx'+indexa">
-                  <span v-if="fixedField.indexOf(keya)<0">
-                    <span class="field-name">{{ keya }}：</span>
-                    <el-input v-model="item[keya]" class="width150" />
-                    <i size="mini" class="el-icon-delete" @click="deleField('tableTab',key,keya)" />
-                  </span>
-                </span>
-                <i class="el-icon-edit addBtn" @click="addTemplate(true,key,'tableTab')" />
-                <i class="el-icon-circle-plus addBtn" @click="addField(true,key,'tableTab')" />
-                <div>
-                  <span class="field-name">描述：</span>
-                  <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
-                </div>
-              </el-form-item>
-              <el-form-item label>
-                <i class="el-icon-plus addBtn" @click="addField(true,'','tableTab',false)" />
-              </el-form-item>
-              <el-form-item label>
-                <el-button type="primary" size="small" @click="submitForm('tableTab')">
-                  保存
-                </el-button>
-                <el-button size="small" @click="$router.go(-1)">
-                  返回
-                </el-button>
-              </el-form-item>
-            </el-form>
+          <el-tab-pane v-for="(queryData, queryKey, queryIndex) in formQueryViewAttrs" :key="'form-query-tab-' + queryIndex" :label="queryData.display">
+            <el-tabs type="border-card">
+              <el-tab-pane v-if="queryData.formClass" :key="'form-query-cond-tab' + queryIndex" label="表单视图">
+                <SetupViewPane :form-class="queryData.formClass" :save-click="saveViewAttributes" />
+              </el-tab-pane>
+              <el-tab-pane v-if="queryData.resultClass" :key="'form-query-result-tab' + queryIndex" label="结果视图">
+                <SetupViewPane :form-class="queryData.resultClass" :save-click="saveViewAttributes" />
+              </el-tab-pane>
+            </el-tabs>
           </el-tab-pane>
         </el-tabs>
       </el-tab-pane>
 
-      <el-tab-pane v-if="formTab" label="表单配置">
-        <el-form label-position="right" style="width: 90%;" label-width="200px" class="demo-form-inline">
-          <el-form-item v-for="(item, key, index) in formTab.data" :key="'bd'+index" :label="`${ key }：`" :prop="key">
-            <i v-if="addFieldFix.test(key)" size="mini" class="el-icon-delete" @click="deleteAddField('formTab',key)" />
-            <span class="field-name">名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
-            <span class="field-name">序号：</span><el-input v-model="item.position" type="number" class="width90" />
-            <span class="field-name">分组：</span><el-input v-model="item.group" class="width150" />
-            <span class="field-name">模板：</span><el-input v-model="item.template" class="width90" />
-            <span v-for="(itema, keya, indexa) in item" :key="'bdzx'+indexa">
-              <span v-if="fixedField.indexOf(keya)<0">
-                <span class="field-name">{{ keya }}：</span>
-                <el-input v-model="item[keya]" class="width150" />
-                <i size="mini" class="el-icon-delete" @click="deleField('formTab',key,keya)" />
-              </span>
-            </span>
-            <el-button v-if="item.fieldType==='TableView'&&item.type!='string'" class="btn" size="mini" round @click="showTabView(true,item)">
-              TV
-            </el-button>
-            <i class="el-icon-edit addBtn" @click="addTemplate(true,key,'formTab')" />
-            <i class="el-icon-circle-plus addBtn" @click="addField(true,key,'formTab')" />
-            <div>
-              <span class="field-name">描述：</span>
-              <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
-            </div>
-          </el-form-item>
-          <el-form-item label>
-            <i class="el-icon-plus addBtn" @click="addField(true,'','formTab',false)" />
-          </el-form-item>
-          <el-form-item label>
-            <el-button type="primary" size="small" @click="submitForm('formTab')">
-              保存
-            </el-button>
-            <el-button size="small" @click="$router.go(-1)">
-              返回
-            </el-button>
-          </el-form-item>
-        </el-form>
-      </el-tab-pane>
-
-      <el-tab-pane v-if="actionTab" label="事件配置">
+      <el-tab-pane label="事件视图">
         <el-tabs type="border-card">
-          <el-tab-pane v-for="(item, key) in actionTab" :key="'sjpz'+key" :label="item.display">
-            <el-form :key="'sjpzf'+key" label-position="right" style="width: 90%;" label-width="200px" class="demo-form-inline">
-              <table class="attribute">
-                <tr>
-                  <td>是否异步：{{ item.asyncEvent }}</td>
-                  <td>视图类型：{{ item.eventFormType }}</td>
-                  <td>事件类型：{{ item.eventType }}</td>
-                  <td>消息是否必填：{{ item.messageRequired?'是':item.messageRequired==null?'不显示':'否' }}</td>
-                  <td>事件目标状态：{{ item.targetState }}</td>
-                  <td>事件是否忽略版本升级：{{ item.stateRevisionChangeIgnored }}</td>
-                </tr>
-                <tr>
-                  <td>是否执行额外的数据接口调用：{{ item.prepareRequired }}</td>
-                  <td>响应数据类型：{{ item.resultClass?JSON.parse(item.resultClass).type:'' }}</td>
-                  <td colspan="4">
-                    事件可执行状态：{{ item.sourceStates }}
-                  </td>
-                </tr>
-              </table>
-
-              <el-form-item v-for="(itema, keya) in actionsObj['actions'+key].data" :key="'shj'+keya" :label="`${ keya }：`" :prop="keya">
-                <i v-if="addFieldFix.test(keya)" size="mini" class="el-icon-delete" @click="deleteAddField(`actionsObj${actionPrefix}actions${key}`,keya)" />
-                <span class="field-name">名称：</span><el-input v-model="itema.title" style="width: 150px;" class="width150" />
-                <span class="field-name">序号：</span><el-input v-model="itema.position" type="number" class="width90" />
-                <span class="field-name">分组：</span><el-input v-model="itema.group" class="width150" />
-                <span v-for="(iteme, keye, indexe) in itema" :key="'sjzx'+indexe">
-                  <span v-if="fixedField.indexOf(keye)<0">
-                    <span class="field-name">{{ keye }}：</span>
-                    <el-input v-model="itema[keye]" class="width150" />
-                    <i size="mini" class="el-icon-delete" @click="deleFixField(`actionsObj${actionPrefix}actions${key}`,keya,keye)" />
-                  </span>
-                </span>
-                <el-button v-if="item.fieldType==='TableView'&&item.type!='string'" class="btn" size="mini" round @click="showTabView(true,item)">
-                  TV
-                </el-button>
-                <i class="el-icon-circle-plus addBtn" @click="addField(true,keya, `actionsObj${actionPrefix}actions${key}`)" />
-                <div>
-                  <span class="field-name">描述：</span>
-                  <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
-                </div>
-              </el-form-item>
-              <el-form-item label>
-                <i class="el-icon-plus addBtn" @click="addField(true,'',`actionsObj${actionPrefix}actions${key}`,false)" />
-              </el-form-item>
-              <el-form-item label style="margin-left:20px;">
-                <el-button type="primary" size="small" @click="submitForm(`actionsObj${actionPrefix}actions${key}`)">
-                  保存
-                </el-button>
-                <el-button size="small" @click="$router.go(-1)">
-                  返回
-                </el-button>
-              </el-form-item>
-            </el-form>
+          <el-tab-pane v-for="(actionData, actionKey, actionIndex) in formActionViewAttrs" :key="'form-action-tab-' + actionIndex" :label="actionData.display">
+            <el-tabs type="border-card">
+              <el-tab-pane v-if="actionData.formClass.data" :key="'form-action-cond-tab' + actionIndex" label="表单视图">
+                <SetupViewPane :form-class="actionData.formClass" :save-click="saveViewAttributes" />
+              </el-tab-pane>
+              <el-tab-pane v-if="actionData.resultClass.data" :key="'form-action-result-tab' + actionIndex" label="结果视图">
+                <SetupViewPane :form-class="actionData.resultClass" :save-click="saveViewAttributes" />
+              </el-tab-pane>
+            </el-tabs>
           </el-tab-pane>
         </el-tabs>
       </el-tab-pane>
 
-      <el-tab-pane v-for="(value,idex) in addTabList" :key="'diy'+idex">
-        <div slot="label">
-          {{ value.substr(value.lastIndexOf('.')+1) }}
-          <i size="mini" class="el-icon-delete" @click="deleteTab(idex)" />
+      <el-tab-pane :key="'form-detail-tab'" label="详情视图">
+        <SetupViewPane :form-class="formDetailViewAttrs" :save-click="saveViewAttributes" />
+      </el-tab-pane>
+
+      <el-tab-pane :key="'form-extras-tab'" label="关联视图">
+        <div style="margin-bottom: 20px;">
+          <el-select :key="'form-extras-selector'" v-model="formExtraViewAttrs.formClass.classPath" class="width600" placeholder="请选择关联视图" @change="loadExtraViewAttributes">
+            <el-option v-for="extra in formExtraViewAttrs.names" :key="`form-extra-name-${extra}`" :label="extra" :value="extra" />
+          </el-select>
+          <el-button type="primary" size="small" style="margin-left: 20px;" @click="showExtraViewCreationForm()">
+            添加关联
+          </el-button>
+          <el-button type="primary" size="small" style="margin-left: 20px;" @click="removeSelectedExtraView()">
+            删除当前视图
+          </el-button>
         </div>
-        <el-form v-if="showTabs" size="mini" label-position="right" style="width: 100%;" label-width="160px" class="demo-form-inline">
-          <el-form-item v-for="(item, key, index) in tabObj['tab'+idex].data" :key="'sss'+index" :label="`${ key }：`" :prop="key">
-            <i v-if="addFieldFix.test(key)" size="mini" class="el-icon-delete" @click="deleteAddField(`tabObj${actionPrefix}tab${idex}`,key)" />
-            <span class="field-name">名称：</span><el-input v-model="item.title" style="width: 150px;" class="width150" />
-            <span class="field-name">序号：</span><el-input v-model="item.position" type="number" class="width90" />
-            <span class="field-name">分组：</span><el-input v-model="item.group" class="width150" />
-            <span class="field-name">模板：</span><el-input v-model="item.template" class="width90" />
-            <span v-for="(itema, keya, indexa) in item" :key="'diyzx'+indexa">
-              <span v-if="fixedField.indexOf(keya)<0">
-                <span class="field-name">{{ keya }}：</span>
-                <el-input v-model="item[keya]" class="width150" />
-                <i size="mini" class="el-icon-delete" @click="deleFixField(`tabObj${actionPrefix}tab${idex}`,key,keya)" />
-              </span>
-            </span>
-            <i class="el-icon-edit addBtn" @click="addTemplate(true,key,`tabObj${actionPrefix}tab${idex}`)" />
-            <i class="el-icon-circle-plus addBtn" @click="addField(true,key,`tabObj${actionPrefix}tab${idex}`)" />
-            <div>
-              <span class="field-name">描述：</span>
-              <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
-            </div>
-          </el-form-item>
-          <el-form-item label>
-            <i class="el-icon-plus addBtn" @click="addField(true,'',`tabObj${actionPrefix}tab${idex}`,false)" />
-          </el-form-item>
-          <el-form-item label>
-            <el-button type="primary" size="small" @click="submitForm(`tabObj${actionPrefix}tab${idex}`)">
-              保存
-            </el-button>
-            <el-button size="small" @click="$router.go(-1)">
-              返回
-            </el-button>
-          </el-form-item>
-        </el-form>
-      </el-tab-pane>
-
-      <el-tab-pane>
-        <span slot="label"><i class="el-icon-circle-plus-outline addBtn" @click="addTab(true)" /></span>
+        <SetupViewPane :form-class="formExtraViewAttrs.formClass" :save-click="saveViewAttributes" />
       </el-tab-pane>
     </el-tabs>
 
-    <el-dialog title="新增Tab" :modal-append-to-body="false" :close-on-click-modal="false" :visible.sync="addTabVisible" width="700px">
-      <el-form ref="tabForm" label-position="right" label-width="90px" class="demo-form-inline">
-        <el-form-item label="服务key：" prop="field">
-          <el-input v-model.trim="templateTxt" style="width: 80%;" />
+    <el-dialog title="添加关联视图" :modal-append-to-body="false" :close-on-click-modal="false" :visible.sync="formViewCreation.visible" width="800px">
+      <el-form ref="viewCreationForm" :rules="formViewCreation.rules" :model="formViewCreation.data" label-position="right" label-width="90px" class="demo-form-inline">
+        <el-form-item label="服务key：" prop="view">
+          <el-input v-model="formViewCreation.data.view" class="width600" :placeholder="'请输入视图将模型的路径（ClassPath）'" />
         </el-form-item>
         <el-form-item label>
-          <el-button type="primary" size="small" @click="saveTab('tabForm')">
+          <el-button type="primary" size="small" @click="closeExtraViewCreationForm(true)">
             保存
           </el-button>
-          <el-button size="small" @click="addTab(false)">
+          <el-button size="small" @click="closeExtraViewCreationForm()">
             取消
           </el-button>
         </el-form-item>
       </el-form>
-    </el-dialog>
-
-    <el-dialog title="新增字段" :modal-append-to-body="false" :close-on-click-modal="false" :visible.sync="dialogAddVisible" width="700px">
-      <el-form ref="formref" label-position="right" :rules="addRules" :model="addFieldObj" label-width="120px" class="demo-form-inline">
-        <el-form-item label="字段：" prop="field">
-          <el-input v-model.trim="addFieldObj.field" class="width180" :placeholder="isAddAttribute?'':'字段需以*结尾'" />
-        </el-form-item>
-        <el-form-item v-if="isAddAttribute" label="值：" prop="value">
-          <el-input v-model.trim="addFieldObj.value" class="width180" />
-        </el-form-item>
-        <el-form-item label>
-          <el-button type="primary" size="small" @click="saveField('formref')">
-            保存
-          </el-button>
-          <el-button size="small" @click="addField(false)">
-            取消
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-dialog>
-
-    <el-dialog title="TableView配置" :modal-append-to-body="false" :close-on-click-modal="false" :visible.sync="tableViewVisible" width="80%">
-      <el-form v-if="tableViewTab" label-position="right" style="width: 90%;" label-width="200px" class="demo-form-inline">
-        <el-form-item v-for="(itema, keya) in tableViewTab.data" :key="'tw'+keya" :label="`${ keya }：`" :prop="keya">
-          <span class="field-name">名称：</span><el-input v-model="itema.title" style="width: 150px;" class="width150" />
-          <span class="field-name">序号：</span><el-input v-model="itema.position" type="number" class="width90" />
-          <span class="field-name">分组：</span><el-input v-model="itema.group" class="width150" />
-          <span class="field-name">模板：</span><el-input v-model="itema.template" class="width90" />
-          <span v-for="(iteme, keye, indexe) in itema" :key="'twzx'+indexe">
-            <span v-if="fixedField.indexOf(keye)<0">
-              <span class="field-name">{{ keye }}：</span>
-              <el-input v-model="itema[keye]" class="width150" />
-              <i size="mini" class="el-icon-delete" @click="deleField('tableViewTab',keya,keye)" />
-            </span>
-          </span>
-          <i class="el-icon-edit addBtn" @click="addTemplate(true,keya,'tableViewTab')" />
-          <i class="el-icon-circle-plus addBtn" @click="addField(true,keya, 'tableViewTab')" />
-          <div>
-            <span class="field-name">描述：</span>
-            <el-input v-model="item.description" type="textarea" :rows="2" class="field-line" />
-          </div>
-        </el-form-item>
-        <el-form-item label style="margin-left:20px;">
-          <el-button type="primary" size="small" @click="submitForm('tableViewTab')">
-            保存
-          </el-button>
-          <el-button size="small" @click="showTabView(false)">
-            取消
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-dialog>
-
-    <el-dialog title="编辑模板" :modal-append-to-body="false" :close-on-click-modal="false" :visible.sync="templateVisible" width="800px">
-      <div>
-        <div>模板内容：</div>
-        <el-input v-model="templateTxt" type="textarea" rows="10" />
-      </div>
-      <div>
-        <el-button type="primary" size="small" @click="saveTemplate()">
-          保存
-        </el-button>
-        <el-button size="small" @click="addTemplate(false)">
-          取消
-        </el-button>
-      </div>
     </el-dialog>
   </div>
 </template>
 <script>
 import { Loading } from 'element-ui'
-import * as API from '@/apis/formControl/index'
+import FormApi from '@/apis/formApi'
+import SetupViewPane from './setupPane'
+import tool from '@/utils/tools.js'
 export default {
+  components: {
+    SetupViewPane
+  },
   data() {
     return {
       formName: this.$route.params.form_name,
       formTitle: '',
-      fixedField: ['title', 'group', 'position', 'description', 'fieldType', 'template', 'properties', 'classPath', 'fieldTypeKey', 'fieldOptionsType', 'type'],
-      noFromField: ['upload_remove', 'upload'],
-      dialogAddVisible: false,
-      tableViewVisible: false,
-      templateVisible: false,
-      addTabVisible: false,
-      choseAddKey: '',
-      choseObjName: '',
+      /**
+       * 详情视图界面数据
+       */
+      formDetailViewAttrs: {
+        data: {}
+      },
+      /**
+       * 查询视图的数据
+       */
+      formQueryViewAttrs: {
+      },
+      /**
+       * 事件视图的数据
+       */
+      formActionViewAttrs: {
+      },
+      /**
+       * 关联视图界面数据
+       */
+      formExtraViewAttrs: {
+        names: [],
+        formClass: {
+          data: null,
+          classPath: ''
+        }
+      },
+      /**
+       * 新增字关联视图
+       */
+      formViewCreation: {
+        data: {
+          view: ''
+        },
+        target: {
 
-      addFieldObj: {
-        field: '',
-        value: ''
-      },
-      queriesTab: null,
-      tableTab: null,
-      formTab: null,
-      actionTab: null,
-      tableViewTab: null,
-      actionPrefix: 'ttt',
-      templateTxt: '',
-      addTabList: [],
-      isAddAttribute: true,
-      addFieldFix: /\*$/,
-      addRules: {
-        field: [
-          { required: true, message: '内容不能为空', trigger: 'blur' }
-        ]
-      },
-      actionsObj: {
-        actions0: {},
-        actions1: {},
-        actions2: {},
-        actions3: {},
-        actions4: {},
-        actions5: {},
-        actions6: {},
-        actions7: {},
-        actions8: {},
-        actions9: {},
-        actions10: {},
-        actions11: {},
-        actions12: {},
-        actions13: {},
-        actions14: {},
-        actions15: {},
-        actions16: {},
-        actions17: {},
-        actions18: {},
-        actions19: {},
-        actions20: {}
-      },
-      showTabs: false,
-      tabObj: {
-        tab0: {},
-        tab1: {},
-        tab2: {},
-        tab3: {},
-        tab4: {},
-        tab5: {},
-        tab6: {},
-        tab7: {},
-        tab8: {},
-        tab9: {}
-      },
-      template: ''
+        },
+        rules: {
+          view: [
+            { required: true, message: '内容不能为空', trigger: 'blur' }
+          ]
+        },
+        visible: false
+      }
     }
   },
+  created() {
+    this.formApi = new FormApi(this.formName)
+  },
   mounted() {
-    this.getViewattrsInit()
+    /**
+     * 初始化流程定义数据
+     */
+    this.formApi.loadDefinition().then(definition => {
+      this.formTitle = definition.title
+      this.getDetailViewAttributes(definition.formClass)
+      this.getQueriesViewAttriutes(definition.queries, definition.otherQueries)
+      this.getActionsViewAttriutes(definition.actions, definition.otherActions)
+      this.loadExtraViewNames()
+    })
   },
   methods: {
-    getViewattrsInit() {
-      API.getDefinition(this.formName).then(res => {
-        this.formTitle = res.data.title
-        this.getQueriesTab(res.data.queries[0].formClass)
-        this.getTableTab(res.data.queries[0].resultClass)
-        this.getFormTab(res.data.formClass)
-        this.getActionTab(res.data.actions.filter(t => this.noFromField.indexOf(t.name) < 0))
-        this.getExtraviewsInfo()
-      })
+    /**
+     * 往关联视图清单中添加视图
+     */
+    addExtraViewNames(names) {
+      if (tool.isBlank(names)) {
+        return
+      }
+      if (!tool.isArray(names)) {
+        names = [names]
+      }
+      for (var i = 0; i < names.length; i++) {
+        this.formExtraViewAttrs.names.push(names[i])
+      }
+      tool.arraySortAndUnique(this.formExtraViewAttrs.names, true)
     },
 
-    getQueriesTab(orgObj) {
-      API.getViewattrs(this.formName, JSON.parse(orgObj).classPath).then(rea => {
-        this.queriesTab = { data: this.getObjOption(JSON.parse(orgObj).properties, JSON.parse(rea.data)), classPath: JSON.parse(orgObj).classPath }
-      })
-    },
-    getTableTab(orgObj) {
-      API.getViewattrs(this.formName, JSON.parse(orgObj).classPath).then(rea => {
-        this.tableTab = { data: this.getObjOption(JSON.parse(orgObj).properties, JSON.parse(rea.data)), classPath: JSON.parse(orgObj).classPath }
-      })
-    },
-    getFormTab(orgObj) {
-      API.getViewattrs(this.formName, JSON.parse(orgObj).classPath).then(rea => {
-        this.formTab = { data: this.getObjOption(JSON.parse(orgObj).properties, JSON.parse(rea.data)), classPath: JSON.parse(orgObj).classPath }
-      })
-    },
-    getActionTab(actions) {
-      var orgObj = {}
-      var count = 0
-      actions.forEach((item, index) => {
-        orgObj = JSON.parse(item.formClass)
-        return ((index, orgObj) => {
-          API.getViewattrs(this.formName, orgObj.classPath).then(rea => {
-            ++count
-            this.actionsObj['actions' + index] = { data: this.getObjOption(orgObj.properties, JSON.parse(rea.data)), classPath: orgObj.classPath }
-            if (count === actions.length) {
-              this.actionTab = actions
+    // /**
+    // * 从关联视图清单中移除视图
+    // */
+    // delExtraViewNames(names) {
+    //   if (tool.isBlank(names)) {
+    //     return
+    //   }
+    //   if (!tool.isArray(names)) {
+    //     names = [names]
+    //   }
+    //   for (var i = this.formExtraViewAttrs.names.length - 1; i >= 0; i--) {
+    //     if (tool.inArray(this.formExtraViewAttrs.names[i], names) >= 0) {
+    //       this.formExtraViewAttrs.names.splice(i, 1)
+    //     }
+    //   }
+    // },
+
+    /**
+     * 从关联视图清单中移除视图
+     */
+    removeSelectedExtraView() {
+      const that = this
+      const formViewKey = that.formExtraViewAttrs.formClass.classPath
+      if (tool.isBlank(formViewKey)) {
+        return
+      }
+      this.$confirm(`是否确认移当前的视图关联 : ${formViewKey} ?`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(function() {
+        var removed = []
+        for (var index in that.formExtraViewAttrs.names) {
+          var idxName = that.formExtraViewAttrs.names[index]
+          if (idxName === formViewKey) {
+            continue
+          }
+          removed.push(idxName)
+        }
+        that.formApi.saveExtraViewNames(removed).then(res => {
+          for (var i = that.formExtraViewAttrs.names.length - 1; i >= 0; i--) {
+            if (formViewKey === that.formExtraViewAttrs.names[i]) {
+              that.formExtraViewAttrs.names.splice(i, 1)
+              that.formExtraViewAttrs['formClass'] = {}
             }
-          })
-        })(index, orgObj)
-      })
-    },
-    getExtraviewsInfo() {
-      this.showTabs = false
-      API.getExtraviews(this.formName).then(res => { this.addTabList = res.data })
-      API.getExtraviewsDefinition(this.formName).then(res => {
-        var count = 0
-        res.data.forEach((t, i) => {
-          return ((t, i) => {
-            API.getViewattrs(this.formName, JSON.parse(t).classPath).then(rea => {
-              ++count
-              this.tabObj['tab' + i] = { data: this.getObjOption(JSON.parse(t).properties, JSON.parse(rea.data)), classPath: JSON.parse(t).classPath }
-              if (count === res.data.length) {
-                this.showTabs = true
-              }
-            })
-          })(t, i)
+          }
         })
       })
     },
 
-    getObjOption(obj, reaArray) {
-      if (!obj) return {}
+    /**
+     * 初始化表单详情页的视图数据
+     */
+    getDetailViewAttributes(origin) {
+      this.formApi.loadViewAttributes(origin.classPath).then(customs => {
+        this.formDetailViewAttrs = { data: this.mergeViewAttributes(origin.properties, customs), classPath: origin.classPath }
+      })
+    },
+
+    /**
+     * 初始化预定义查询的界面视图数据
+     */
+    getQueriesViewAttriutes(queries, otherQueries) {
+      var count = 0
+      var formQueryViewAttrs = {}
+      if (!tool.isArray(queries)) {
+        queries = []
+      }
+      if (tool.isArray(otherQueries)) {
+        queries = queries.concat(otherQueries)
+      }
+      console.log('获取到的查询定义数据如下：')
+      console.log(queries)
+      console.log('开始加载用户自定义查询视图数据 ...')
+      queries.forEach((query, index) => {
+        var formQueryViewAttrsKey = 'formqueries' + tool.lengthPrefixed(index, 2, '0')
+        formQueryViewAttrs[formQueryViewAttrsKey] = { name: query.name, display: query.display }
+        return ((index, query) => {
+          this.formApi.loadViewAttributes(query.formClass.classPath).then(customs => {
+            ++count
+            formQueryViewAttrs[formQueryViewAttrsKey]['formClass'] = {
+              classPath: query.formClass.classPath,
+              data: this.mergeViewAttributes(query.formClass.properties, customs)
+            }
+            if (count === queries.length * 2) {
+              this.formQueryViewAttrs = formQueryViewAttrs
+            }
+          })
+          this.formApi.loadViewAttributes(query.resultClass.classPath).then(customs => {
+            ++count
+            formQueryViewAttrs[formQueryViewAttrsKey]['resultClass'] = {
+              classPath: query.resultClass.classPath,
+              data: this.mergeViewAttributes(query.resultClass.properties, customs)
+            }
+            if (count === queries.length * 2) {
+              console.log('加载用户自定义查询视图数据完成，合并数据如下：')
+              console.log(formQueryViewAttrs)
+              this.formQueryViewAttrs = formQueryViewAttrs
+            }
+          })
+        })(index, query)
+      })
+    },
+
+    /**
+     * 初始化可执行事件的界面视图数据
+     */
+    getActionsViewAttriutes(actions, otherActions) {
+      var count = 0
+      var formActionViewAttrs = {}
+      if (!tool.isArray(actions)) {
+        actions = []
+      }
+      if (tool.isArray(otherActions)) {
+        actions = actions.concat(otherActions)
+      }
+      console.log('获取到的查询定义数据如下：')
+      console.log(actions)
+      console.log('开始加载用户自定义查询视图数据 ...')
+      actions.forEach((action, index) => {
+        var formActionViewAttrsKey = 'formactions' + tool.lengthPrefixed(index, 2, '0')
+        formActionViewAttrs[formActionViewAttrsKey] = { name: action.name, display: action.display }
+        return ((index, action) => {
+          this.formApi.loadViewAttributes(action.formClass.classPath).then(customs => {
+            ++count
+            formActionViewAttrs[formActionViewAttrsKey]['formClass'] = {
+              classPath: action.formClass.classPath,
+              data: this.mergeViewAttributes(action.formClass.properties, customs)
+            }
+            if (count === actions.length * 2) {
+              console.log('加载用户自定义查询视图数据完成，合并数据如下：')
+              console.log(formActionViewAttrs)
+              this.formActionViewAttrs = formActionViewAttrs
+            }
+          })
+          this.formApi.loadViewAttributes(action.resultClass.classPath).then(customs => {
+            ++count
+            formActionViewAttrs[formActionViewAttrsKey]['resultClass'] = {
+              classPath: action.resultClass.classPath,
+              data: this.mergeViewAttributes(action.resultClass.properties, customs)
+            }
+            if (count === actions.length * 2) {
+              console.log('加载用户自定义查询视图数据完成，合并数据如下：')
+              console.log(formActionViewAttrs)
+              this.formActionViewAttrs = formActionViewAttrs
+            }
+          })
+        })(index, action)
+      })
+    },
+
+    /**
+     * 加载关联视图模型清单
+     */
+    loadExtraViewNames() {
+      this.formApi.loadExtraViewNames().then(names => {
+        console.log('获取到的表单关联的视图清单如下：')
+        console.log(names)
+        this.addExtraViewNames(names)
+      })
+    },
+
+    /**
+     * 加载关联视图模型数据
+     */
+    loadExtraViewAttributes(formViewKey) {
+      // console.log(formViewKey)
+      if (formViewKey && formViewKey.value) {
+        formViewKey = formViewKey.value
+      }
+      console.log('"' + tool.trim(tool.stringify(formViewKey)) + '"')
+      if (tool.isBlank(formViewKey)) {
+        return
+      }
+      this.formExtraViewAttrs['formClass'] = { classPath: formViewKey }
+      this.formApi.loadViewDefinition(formViewKey).then((formViewData) => {
+        this.formApi.loadViewAttributes(formViewKey).then(customs => {
+          this.formExtraViewAttrs['formClass'] = {
+            classPath: formViewKey,
+            data: this.mergeViewAttributes(formViewData.properties, customs)
+          }
+        }).catch((e) => {
+          this.$message.error('加载表单界面视图自定义数据失败：' + formViewKey)
+        })
+      }).catch((e) => {
+        this.$message.error('加载表单界面视图原始数据失败：' + formViewKey)
+      })
+    },
+
+    mergeViewAttributes(origin, customs) {
+      if (!origin) {
+        return
+      }
       var result = {}
-      for (var key in obj) {
+      for (var key in origin) {
         result[key] = {
-          title: obj[key].title || '',
-          group: obj[key].group || '',
-          position: obj[key].position || '',
-          description: obj[key].description || '',
-          fieldType: obj[key].fieldType,
-          type: obj[key].type,
-          template: obj[key].template || '',
-          properties: (obj[key].fieldType === 'TableView' && obj[key].type === 'array') ? (obj[key].items.properties || null) : (obj[key].properties || null),
-          classPath: (obj[key].fieldType === 'TableView' && obj[key].type === 'array') ? (obj[key].items.classPath || '') : (obj[key].classPath || '')
+          title: origin[key].title || '',
+          group: origin[key].group || '',
+          position: origin[key].position || '',
+          description: origin[key].description || '',
+          fieldType: origin[key].fieldType || 'string',
+          type: origin[key].type || 'string',
+          template: origin[key].template || '',
+          classPath: origin[key].items ? (origin[key].items.classPath || '') : (origin[key].classPath || '')
+        }
+        /**
+         * 所有发现的关联视图，都将被自动添加到可选列表中
+         */
+        if (!tool.isBlank(result[key].classPath)) {
+          this.addExtraViewNames(result[key].classPath)
         }
       }
 
-      if (!reaArray || reaArray.length <= 0) {
-        return this.sortFieldInfo(result)
-      }
-
-      for (var i = 0; i < reaArray.length; i++) {
-        for (var keya in obj) {
-          if (reaArray[i].field === keya) {
-            delete reaArray[i].field
-            delete reaArray[i].properties
-            Object.assign(result[keya], reaArray[i])
-            continue
-          }
-        }
-        if (this.addFieldFix.test(reaArray[i].field)) {
-          var fieldName = reaArray[i].field
-          delete reaArray[i].field
-          Object.assign(result, { [fieldName]: reaArray[i] })
-        }
-      }
-      return this.sortFieldInfo(result)
-    },
-
-    addField(isShow, key, orignName, isAddAttr = true) {
-      this.dialogAddVisible = isShow
-      this.choseAddKey = key
-      this.choseObjName = orignName
-      this.isAddAttribute = isAddAttr
-    },
-    saveField(fname) {
-      this.$refs[fname].validate(valid => {
-        if (valid) {
-          var checkd = true
-          if (!this.isAddAttribute) {
-            if (!this.addFieldFix.test(this.addFieldObj.field)) {
-              this.$message.warning('新增字段结尾必须带上*号')
-              checkd = false
+      if (tool.isArray(customs)) {
+        for (var i = 0; i < customs.length; i++) {
+          /* 内建字段中不存在的，一律视为扩展字段 */
+          var innerField = null
+          for (var keyr in result) {
+            if (customs[i].field === keyr) {
+              innerField = result[keyr]
+              break
             }
-          } else if (this.fixedField.indexOf(this.addFieldObj.field) > -1) {
-            this.$message.warning('该新增字段为内定字段，不能使用')
-            checkd = false
           }
-          if (checkd) {
-            if (this.isAddAttribute) {
-              if (this.choseObjName.indexOf(this.actionPrefix) > -1) {
-                var tname = this.choseObjName.split(this.actionPrefix)
-                this.$set(this[tname[0]][tname[1]].data[this.choseAddKey], this.addFieldObj.field, this.addFieldObj.value)
-              } else {
-                this.$set(this[this.choseObjName].data[this.choseAddKey], this.addFieldObj.field, this.addFieldObj.value)
-              }
-            } else {
-              if (this.choseObjName.indexOf(this.actionPrefix) > -1) {
-                var tnames = this.choseObjName.split(this.actionPrefix)
-                this.$set(this[tnames[0]][tnames[1]].data, this.addFieldObj.field, {})
-              } else {
-                this.$set(this[this.choseObjName].data, this.addFieldObj.field, {})
-              }
-            }
-
-            this.dialogAddVisible = false
-            this.addFieldObj.field = ''
-            this.addFieldObj.value = ''
+          if (!innerField) {
+            result[customs[i].field] = { type: 'string', fieldType: '_custom' }
+            innerField = result[customs[i].field]
           }
+          Object.assign(innerField, {
+            'title': tool.defaultIfEquals(tool.ifBlank(customs[i].title, innerField.title), '<empty>', ''),
+            'group': tool.defaultIfEquals(tool.ifBlank(customs[i].group, innerField.group), '<empty>', ''),
+            'position': tool.defaultIfEquals(tool.ifBlank(customs[i].position, innerField.position), '<empty>', ''),
+            'template': tool.defaultIfEquals(tool.ifBlank(customs[i].template, innerField.template), '<empty>', ''),
+            'placement': tool.defaultIfEquals(tool.ifBlank(customs[i].placement, innerField.placement), '<empty>', ''),
+            'description': tool.defaultIfEquals(tool.ifBlank(customs[i].description, innerField.description), '<empty>', '')
+          })
         }
-      })
-    },
-
-    deleField(orignName, key, keya) {
-      this.$delete(this[orignName].data[key], keya)
-    },
-
-    deleFixField(orignName, key, keya) {
-      var tname = orignName.split(this.actionPrefix)
-      this.$delete(this[tname[0]][tname[1]].data[key], keya)
-    },
-
-    deleteAddField(orignName, key) {
-      this.$confirm(`是否确认删除该字段?`, '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        if (orignName.indexOf(this.actionPrefix) > -1) {
-          var tname = orignName.split(this.actionPrefix)
-          this.$delete(this[tname[0]][tname[1]].data, key)
-        } else {
-          this.$delete(this[orignName].data, key)
-        }
-      })
-    },
-
-    submitForm(orignName) {
-      var tabFields
-      var classPath
-      if (orignName.indexOf(this.actionPrefix) > -1) {
-        var tname = orignName.split(this.actionPrefix)
-        tabFields = this[tname[0]][tname[1]].data
-        classPath = this[tname[0]][tname[1]].classPath
-      } else {
-        tabFields = this[orignName].data
-        classPath = this[orignName].classPath
       }
+      return this.sortFieldByPosition(result)
+    },
+
+    /**
+     * 保存当前的视图界面数据
+     */
+    saveViewAttributes(formClassViewAttributes) {
       this.$confirm(`是否确认保存?`, '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        var loadObj = Loading.service({
+        var uploadData = []
+        for (var key in formClassViewAttributes.data) {
+          var attrs = formClassViewAttributes.data[key]
+          uploadData.push({
+            field: key,
+            title: attrs.title,
+            group: attrs.group,
+            position: attrs.position,
+            description: attrs.description,
+            fieldType: attrs.fieldType,
+            template: attrs.template,
+            placement: attrs.placement
+          })
+        }
+        var loading = Loading.service({
           fullscreen: true,
           text: '请求中…',
           background: 'rgba(0, 0, 0, 0.1)'
         })
-        var dataStr = ''
-        for (var key in tabFields) {
-          dataStr += `,{"field":"${key}"`
-          for (var keye in tabFields[key]) {
-            dataStr += `,"${keye}":"${tabFields[key][keye]}"`
-          }
-          dataStr += `}`
-        }
-        var resouse = JSON.parse(`[${dataStr.substr(1)}]`)
-        API.updateViewattrs(this.formName, classPath, resouse).then(res => {
-          loadObj.close()
-          if (orignName.indexOf(this.actionPrefix) > -1) {
-            var tname = orignName.split(this.actionPrefix)
-            this[tname[0]][tname[1]].data = this.sortFieldInfo(this[tname[0]][tname[1]].data)
-          } else {
-            this[orignName].data = this.sortFieldInfo(this[orignName].data)
-          }
-          if (orignName === 'tableViewTab') {
-            this.templateVisible = false
-            this.tableViewVisible = false
-            this.getViewattrsInit()
-          }
+        this.formApi.saveViewAttributes(formClassViewAttributes.classPath, uploadData).then(res => {
+          formClassViewAttributes.data = this.sortFieldByPosition(formClassViewAttributes.data)
           this.$message.success(`保存成功`)
-        }).catch(e => {
-          loadObj.close()
-          this.$message.error(`保存失败,${e.message}`)
+        }).finally(e => {
+          loading.close()
         })
       })
     },
-    sortFieldInfo(sortObj) {
-      sortObj = sortObj || null
-      if (!sortObj) return {}
+
+    /**
+     * 根据字段定义的位置数据，进行自动的排序
+     */
+    sortFieldByPosition(formViewData) {
+      if (!tool.isPlainObject(formViewData)) {
+        return
+      }
       var sortArray = []
       var noSortObj = {}
-      for (var key in sortObj) {
-        if (sortObj[key]['position'] && sortObj[key]['position'] > 0) {
+      for (var key in formViewData) {
+        if (formViewData[key]['position'] && formViewData[key]['position'] > 0) {
           sortArray.push({
             key: key,
-            order: sortObj[key]['position']
+            order: formViewData[key]['position']
           })
         } else {
-          noSortObj[key] = sortObj[key]
+          noSortObj[key] = formViewData[key]
         }
       }
       var result = {}
       sortArray.sort((n, o) => n.order - o.order)
       sortArray.forEach(t => {
-        result[t.key] = sortObj[t.key]
+        result[t.key] = formViewData[t.key]
       })
       return Object.assign(result, noSortObj)
     },
 
-    showTabView(isto, obj) {
-      if (!isto) {
-        this.tableViewVisible = isto
-      } else {
-        API.getViewattrs(this.formName, obj.classPath).then(rea => {
-          this.tableViewTab = { data: this.getObjOption(obj.properties, JSON.parse(rea.data)), classPath: obj.classPath }
-          this.tableViewVisible = isto
-        })
-      }
+    /**
+     * 打开关联视图模型添加窗口
+     */
+    showExtraViewCreationForm() {
+      this.formViewCreation.data = {}
+      this.formViewCreation.visible = true
     },
 
-    addTemplate(isto, key, orignName) {
-      this.templateVisible = isto
-      if (isto) {
-        this.choseObjName = orignName
-        this.choseAddKey = key
-        if (orignName.indexOf(this.actionPrefix) > -1) {
-          var tname = orignName.split(this.actionPrefix)
-          this.templateTxt = decodeURIComponent(this[tname[0]][tname[1]].data[key].template) || ''
-        } else {
-          this.templateTxt = decodeURIComponent(this[orignName].data[key].template) || ''
+    /**
+     * 关闭关联视图模型添加窗口
+     */
+    closeExtraViewCreationForm(saveView) {
+      if (!saveView) {
+        this.formViewCreation.visible = false
+        return
+      }
+      console.log('当前添加的视图信息如下：')
+      console.log(this.formViewCreation)
+      this.$refs['viewCreationForm'].validate(valid => {
+        if (!valid) {
+          return
         }
-      }
-    },
-
-    saveTemplate() {
-      if (this.choseObjName.indexOf(this.actionPrefix) > -1) {
-        var tname = this.choseObjName.split(this.actionPrefix)
-        this[tname[0]][tname[1]].data[this.choseAddKey].template = encodeURIComponent(this.templateTxt)
-      } else {
-        this[this.choseObjName].data[this.choseAddKey].template = encodeURIComponent(this.templateTxt)
-      }
-      this.templateVisible = false
-    },
-
-    addTab(isto) {
-      this.templateTxt = ''
-      this.addTabVisible = isto
-    },
-    deleteTab(index) {
-      this.$confirm(`是否确认删除?`, '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        this.addTabList.splice(index, 1)
-        API.updateExtraviews(this.formName, this.addTabList).then(res => {
-          this.getExtraviewsInfo()
-        }).catch(e => {
-          this.$message.error('删除失败')
+        var loading = Loading.service({
+          fullscreen: true,
+          text: '请求中…',
+          background: 'rgba(0, 0, 0, 0.1)'
         })
-      })
-    },
-    saveTab(fname) {
-      if (this.templateTxt === '') {
-        this.$message.error('请填写服务Key')
-        return false
-      }
-      var loadObj = Loading.service({
-        fullscreen: true,
-        text: '请求中…',
-        background: 'rgba(0, 0, 0, 0.1)'
-      })
-      this.addTabList.splice(-1, 0, this.templateTxt)
-      API.updateExtraviews(this.formName, this.addTabList).then(res => {
-        this.getExtraviewsInfo()
-        this.addTabVisible = false
-        loadObj.close()
-      }).catch(e => {
-        loadObj.close()
+        var extranames = [this.formViewCreation.data.view]
+        for (var key in this.formExtraViewAttrs.names) {
+          extranames.push(this.formExtraViewAttrs.names[key])
+        }
+        this.formApi.saveExtraViewNames(extranames).then(res => {
+          this.closeExtraViewCreationForm()
+          this.addExtraViewNames(this.formViewCreation.data.view)
+        }).finally(e => {
+          loading.close()
+        })
       })
     }
   }
 }
 </script>
-<style scoped lang='scss'>
-.btn {
-    margin-left:20px;
-}
-.el-icon-delete {
-    cursor: pointer;
-    color: red;
-    padding: 0 5px 0 2px;
-}
-.addBtn {
-  cursor: pointer;
-  color: #409EFF;
-  font-size: 21px;
-  margin-left: 10px;
-  vertical-align: middle;
-}
-.attribute {
-  border: 1px solid deepskyblue;
-  padding: 4px 8px;
-  margin-bottom: 20px;
-  color: #aaa;
-  font-size: 14px;
-  border-radius: 2px;
-}
-</style>
 <style lang='scss'>
-.form-setup{
-  .el-dialog__header{
+.form-setup {
+  .el-dialog__header {
     border-bottom: 1px solid #ddd;
   }
-  .field-name {
-    display: inline-block;
-    width: 50px !important;
-  }
-  .el-input{
+  .el-input {
     display: initial !important;
   }
-  .width180 .el-input__inner{
-    width: 180px !important;
-  }
-  .width150 .el-input__inner{
-    width: 150px !important;
-  }
-  .width90 .el-input__inner{
-    width: 90px !important;
-  }
-  .field-line {
-    display: inline-block;
-    width: calc(99% - 50px) !important;
+  .width600 .el-input__inner{
+    width: 600px !important;
   }
 }
 </style>

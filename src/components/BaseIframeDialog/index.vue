@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :close-on-click-modal="false"
-    :title="options.title || '提示'"
+    :title="options.title || ''"
     :visible.sync="dialogVisible"
     :width="options.width || '95%'"
     append-to-body

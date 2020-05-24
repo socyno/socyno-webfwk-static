@@ -1,14 +1,14 @@
 <template>
   <el-select
-    v-model="obj.value"
-    :placeholder="obj.title"
+    v-model="fieldModel.value"
+    :placeholder="fieldModel.title + (fieldModel.required ? '(必填)' : '')"
     :filterable="true"
     :loading="loading"
     automatic-dropdown
     :remote="true"
     :remote-method="filterRemoteMethod"
     value-key="optionValue"
-    :clearable="obj.type !== 'array'"
+    :clearable="fieldModel.type !== 'array'"
     @change="$forceUpdate()"
   >
     <slot v-for="(opt,optidx) in filterOptions">
@@ -22,7 +22,7 @@
       <el-option
         :key="optidx"
         :label="opt.optionDisplay"
-        :value="obj.type === 'array' ? opt : opt.optionValue"
+        :value="fieldModel.type === 'array' ? opt : opt.optionValue"
       >
         <span style="float: left">{{ opt.optionDisplay }}</span>
         <span style="float: right; color: #8492a6; font-size: 13px">{{ opt.optionValue }}</span>
@@ -34,45 +34,38 @@
 import FormApi from '@/apis/formApi'
 export default {
   props: {
-    obj: {
+    fieldModel: {
       type: Object,
-      default: null,
-      loading: false
+      required: true
     }
   },
   data() {
     return {
-      dynamicFilterFormClass: null,
-      filterOptions: [],
-      api: {},
-      loading: false
+      formApi: null,
+      loading: false,
+      filterOptions: []
     }
   },
   watch: {
-    obj: {
+    fieldModel: {
       immediate: true,
       handler(newv) {
-        if (!newv) return
-        this.api = new FormApi(this.$route.params.form_name || this.$route.query.formName)
-        this.filterRemoteMethod(' ')
+        if (!newv || this.formApi) {
+          return
+        }
+        this.formApi = new FormApi(this.$route.params.form_name || this.$route.query.formName)
+        this.filterRemoteMethod()
       }
     }
   },
   methods: {
     filterRemoteMethod(query) {
-      if (query !== '') {
-        this.loading = true
-
-        this.api.loadFormFieldOptionsWithQuery(this.obj.fieldTypeKey, query, this.$route.query.formId).then(res => {
-          if (!res.data) return
-          this.filterOptions = res.data
-          this.loading = false
-        }).catch(res => {
-          this.loading = false
-        })
-      } else {
-        this.options = []
-      }
+      this.loading = true
+      this.formApi.loadFormFieldOptionsWithQuery(this.fieldModel.fieldTypeKey, query, this.$route.query.formId).then(res => {
+        this.filterOptions = res.data || []
+      }).finally(res => {
+        this.loading = false
+      })
     }
   }
 }

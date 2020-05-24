@@ -102,14 +102,6 @@ export function getLogsDetail(formName, formId, detailId) {
   })
 }
 
-// 获取流程表单特定事件的执行前准备数据
-export function getPrepareField(formName, formId, formAction) {
-  return request({
-    url: `/form/prepare/${formName}/${formId}/${formAction}`,
-    method: 'get'
-  })
-}
-
 // 获取所有的已注册通用流程单
 export function getFormList() {
   return request({

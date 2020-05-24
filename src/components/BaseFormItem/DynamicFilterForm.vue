@@ -1,24 +1,20 @@
 <template>
   <div class="dynamic-filter-form">
     <div class="prefilter">
-      <slot v-for="(obj, index) in dynamicData">
-        <el-input
-          v-if="obj.fieldType === 'Simple' && obj.type === 'string' && obj.fieldOptionsType === 'NULL'"
-          :key="index"
-          v-model="obj.value"
-          :placeholder="obj.title + (obj.required ? '(必填)' : '')"
-          @input="$forceUpdate()"
+      <slot v-for="(field, index) in dynamicData">
+        <RemoteSelect
+          v-if="field.fieldOptionsType === 'DYNAMIC'"
+          :field-model="field"
         />
-
         <el-select
-          v-if="obj.fieldType === 'Simple' && obj.type === 'string' && obj.fieldOptionsType === 'STATIC'"
-          v-model="obj.value"
-          :placeholder="obj.title + (obj.required ? '(必填)' : '')"
+          v-else-if="field.fieldOptionsType === 'STATIC'"
+          v-model="field.value"
+          :placeholder="field.title + (field.required ? '(必填)' : '')"
           :clearable="true"
-          :multiple="obj.type === 'array'"
+          :multiple="field.type === 'array'"
           @change="$forceUpdate()"
         >
-          <slot v-for="(opt,optidx) in obj.staticOptions">
+          <slot v-for="(opt,optidx) in field.staticOptions">
             <div
               v-if="opt.group"
               :key="optidx + 1000"
@@ -29,9 +25,12 @@
             <el-option :key="optidx" :label="opt.display" :value="opt.value" />
           </slot>
         </el-select>
-        <RemoteSelect
-          v-if="obj.fieldType === 'TableView' && obj.fieldOptionsType === 'DYNAMIC'"
-          :obj="obj"
+        <el-input
+          v-else
+          :key="index"
+          v-model="field.value"
+          :placeholder="field.title + (field.required ? '(必填)' : '')"
+          @input="$forceUpdate()"
         />
       </slot>
       <el-button :loading="loading" type="primary" @click="handleQuery">

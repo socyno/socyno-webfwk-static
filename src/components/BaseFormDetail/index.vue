@@ -1,33 +1,34 @@
 <template>
   <div v-loading.fullscreen.lock="loading">
-    <BaseFormDetailGenerator :columns="{properties:relyField}" :detail-data="relyObj.form" />
-    <div v-if="actions" class="btnRegion">
+    <BaseFormDetailGenerator
+      :columns="{properties:formDetail.formClass.properties}"
+      :detail-data="formDetail.form"
+    />
+    <div v-if="formDetail.actions" class="btnRegion">
       <el-button
-        v-for="(item,index) in actions"
+        v-for="(item,index) in formDetail.actions"
         :key="index"
         type="primary"
-        @click="actionClick(item)"
+        @click="showActionDialog(item)"
       >
         {{ item.display }}
       </el-button>
     </div>
     <el-dialog
-      :title="canEditFields && canEditFields.title ? canEditFields.title : (clickedAction.display || '操作')"
+      :visible.sync="clickedActionVisible"
+      :title="clickedAction.title || '操作'"
       :modal-append-to-body="true "
       append-to-body
-      :visible.sync="dialogActionVisible"
-      width="950px"
-      @closed="isClosed = true"
+      width="800px"
     >
       <BaseFormGenerator
-        v-if="!isClosed"
-        v-model="filterParams"
-        :is-submit-loading="isSubmitting"
-        :data="canEditFields"
-        :default-data="relyObj.form"
+        v-if="clickedActionVisible"
+        v-model="clickedAction.filterParams"
+        :form-class="clickedAction.formClass"
+        :default-data="clickedAction.defaultData"
         type="submit"
         @input="submitForm"
-        @cancle="cancleClick"
+        @cancle="closeActionDialog"
       />
     </el-dialog>
   </div>
@@ -35,202 +36,133 @@
 <script>
 import BaseFormGenerator from '@/components/BaseFormGenerator'
 import BaseFormDetailGenerator from '@/components/BaseFormDetailGenerator'
-import { getFieldType } from '@/utils/fromCommon'
-import { getPrepareField } from '@/apis/formControl/index'
+import tool from '@/utils/tools.js'
 export default {
-  components: { BaseFormGenerator, BaseFormDetailGenerator },
+  components: {
+    BaseFormGenerator,
+    BaseFormDetailGenerator
+  },
   props: {
     formId: {
       type: String,
-      default: null
+      required: true
     },
     formName: {
       type: String,
-      default: null
+      required: true
     },
-    relyField: {
+    formDetail: {
       type: Object,
-      default: null
-    },
-    relyObj: {
-      type: Object,
-      default: null
-    },
-    actionName: {
-      type: String,
-      default: null
+      required: true
     }
   },
   data() {
     return {
-      // 附件功能特殊处理
-      actions: this.relyObj.actions.filter(
-        t => ['upload_remove', 'upload'].indexOf(t.name) < 0
-      ),
-      actionNames: this.actionName,
-      dialogActionVisible: false,
-      canEditFields: null,
-      filterParams: {},
-      clickedAction: {},
-      showConfirm: false,
-      loading: false,
-      isClosed: false,
-      isSubmitting: false
-    }
-  },
-  watch: {
-    relyObj(newv) {
-      this.actions = newv.actions.filter(
-        t => ['upload_remove', 'upload'].indexOf(t.name) < 0
-      )
+      clickedAction: {
+        title: '',
+        filterParams: {},
+        defaultData: {}
+      },
+      clickedActionVisible: false,
+      loading: false
     }
   },
   methods: {
-    getFieldValue(item, value) {
-      if (getFieldType(item) === 'select') {
-        var t = item.staticOptions.filter(t => t.value === value)
-        if (t && t.length > 0) {
-          return t[0].display
-        }
+    showActionDialog(action) {
+      /**
+       * 事件在页面上会被重复点击，
+       * 为避免多次操作后数据异常
+       * 这里对其进行复制后再修改
+       */
+      console.log('点击事件:')
+      console.log(action)
+      action = tool.jsonCopy(action)
+      /**
+       * 明确定义为无需编辑时，直接执行事件
+       */
+      if (action.eventFormType === 'NULL') {
+        this.clickedAction = action
+        this.submitForm({
+          id: this.formDetail.form.id,
+          revision: this.formDetail.form.revision
+        })
+        return
       }
-      if (typeof value === 'object') {
-        // 如果是个object则取optionDisplay作为显示用
-        if (value) {
-          value = value.optionDisplay || value
-        }
-      }
-      return value
-    },
-    parseFormClassToObj(formClassStr) {
-      var formClass = {}
-      try {
-        formClass = JSON.parse(formClassStr) // 解析json
-      } catch (error) {
-        if (typeof formClassStr === 'object') {
-          // 有可能已经被解析过了,catch到非object都是json有问题
-          formClass = formClassStr
-        } else {
-          // eslint-disable-next-line
-          console.error(error)
-        }
-      }
-      return formClass
-    },
-    actionClick(action) {
-      this.clickedAction = action
-      this.actionNames = action.name
-      this.showConfirm = action.confirmRequired
-      this.auditFormClass(action)
-      this.$emit('toAction', action.name)
-    },
-    /**
-     * 处理formclass
-     * param {object} item action对象
-     * return {object} item.formClass 返回formclass
-     */
-    auditFormClass(item) {
-      item.formClass = this.parseFormClassToObj(item.formClass)
-      this.isClosed = false
-
-      item.formClass.eventFormType = item.eventFormType // EDIT编辑页 VIEW只读查看 NULL直接操作  控制确认取消按钮
-
-      if (item.eventFormType === 'NULL') {
-        var params = {}
-        for (const iterator of item.formClass.required) {
-          if (!this.relyObj.form[iterator]) {
-            continue
-          }
-          params[iterator] = this.relyObj.form[iterator]
-        }
-        this.submitForm(params)
-        return item.formClass
-      }
-
-      if (item.messageRequired !== null) {
-        // true必填备注 false选填 null不显示备注输入框
-        item.formClass.properties._message = {
-          // 手动注入个message
+      /**
+       * 要求填写操作说明。
+       * true - 必填; false - 选填; null - 不填
+       */
+      if (!tool.isUndefOrNull(action.messageRequired)) {
+        action.formClass.properties._message = {
           type: 'string',
-          title: '说明',
+          title: '操作说明',
           fieldType: 'text',
           fieldTypeKey: '',
           fieldOptionsType: 'NULL',
           readonly: false,
-          position: 9999 // 放最下面
+          position: 2000000 // 确保在底部
+        }
+        if (action.messageRequired) {
+          if (!tool.isArray(action.formClass.required)) {
+            action.formClass.required = []
+          }
+          action.formClass.required.push('_message')
         }
       }
-      if (!item.formClass.required) {
-        item.formClass.required = []
-      }
-      if (item.messageRequired) {
-        // 必填
-        item.formClass.required.push('_message')
-      }
-      var prepareDataTemp = {}
-      if (this.relyObj.form.hasOwnProperty('state') && this.relyField.hasOwnProperty('state')) {
-        prepareDataTemp.state = this.getFieldValue(this.relyField.state, this.relyObj.form.state)
-      }
-
-      if (item.prepareRequired) {
+      if (action.prepareRequired) {
         this.loading = true
-        getPrepareField(this.formName, this.formId, item.name)
-          .then(res => {
-            this.dialogActionVisible = true
-            this.loading = false
-
-            item.formClass.prepareData = Object.assign(
-              prepareDataTemp,
-              res.data || {}
+        this.formApi.loadActionPrepareData(this.formId, action.name)
+          .then(data => {
+            action.defaultData = Object.assign(
+              tool.jsonCopy(this.formDetail.form),
+              data || {}
             )
-            this.canEditFields = item.formClass
+            this.clickedAction = action
+            this.clickedActionVisible = true
           })
-          .catch(res => {
+          .finally(res => {
             this.loading = false
           })
       } else {
-        this.dialogActionVisible = true
-        item.formClass.prepareData = prepareDataTemp
-        this.canEditFields = item.formClass
+        action.defaultData = tool.jsonCopy(this.formDetail.form)
+        this.clickedAction = action
+        this.clickedActionVisible = true
       }
-      return item.formClass
+      this.$emit('toAction', action.name)
     },
-    addAttachment(key) {
-      // 上传需要指定对应的字段
-      this.actionNames = 'upload'
-    },
-    submitForm(result) {
-      result.id = this.relyObj.form.id
-      result.revision = this.relyObj.form.revision
-
-      var temp = {
+    /**
+     * 提交事件表单并处理响应
+     */
+    submitForm(params) {
+      params.id = this.formDetail.form.id
+      params.revision = this.formDetail.form.revision
+      var body = {
         action: this.clickedAction.name,
-        formData: result,
-        message: result._message
+        formData: params,
+        message: params._message,
+        onSuccess: this.closeActionDialog
       }
+      delete body.formData._message
 
-      delete temp.formData._message
-
-      if (this.showConfirm) {
+      if (this.clickedAction.confirmRequired) {
         this.$confirm('请确认是否进行此操作?', '提示', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
         })
           .then(() => {
-            this.$emit('submitForm', temp)
-            // eslint-disable-next-line
-            // $('.el-message-box__wrapper').hide()
-          })
-          .catch(() => {
-            // eslint-disable-next-line
-            // $('.el-message-box__wrapper').hide()
+            this.$emit('submitForm', body)
           })
       } else {
-        this.$emit('submitForm', temp)
+        this.$emit('submitForm', body)
       }
     },
-    cancleClick() {
-      this.dialogActionVisible = false
+    /**
+     * 关闭事件视图窗口
+     */
+    closeActionDialog() {
+      // console.log('正在关闭事件视图窗口...')
+      this.clickedActionVisible = false
     }
   }
 }

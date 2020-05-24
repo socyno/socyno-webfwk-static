@@ -5,7 +5,7 @@
         v-if="dynamicFilterFormClass"
         v-model="performData"
         :dynamic-filter-form-class="dynamicFilterFormClass"
-        :item="item"
+        :item="fieldModel"
         :columns="columns"
         @submit="handleAdded"
         @cancle="showFormDialog = false"
@@ -14,7 +14,7 @@
         v-if="listItemCreationFormClass"
         v-model="performData"
         type="submit"
-        :data="listItemCreationFormClass"
+        :form-class="listItemCreationFormClass"
         @input="handleAdded"
         @cancle="showFormDialog = false"
       />
@@ -22,23 +22,23 @@
 
     <div v-if="dynamicFilterFormClass || listItemCreationFormClass">
       <el-button type="primary" size="mini" @click="showFormDialog = true">
-        选择
+        {{ dynamicFilterFormClass ? '选择' : '添加' }}
       </el-button>
-      <span v-if="item.type === 'string' || item.type === 'object'"> {{ item.value.optionDisplay }}</span>
+      <span v-if="fieldModel.type === 'string' || fieldModel.type === 'object'"> {{ fieldModel.value.optionDisplay }}</span>
     </div>
     <el-select
-      v-if="!dynamicFilterFormClass && !listItemCreationFormClass"
+      v-else
       v-model="value"
-      :placeholder="filter ? '请输入关键词' : '请选择'"
-      :filterable="filter"
+      :placeholder="'可输入关键词进行筛选'"
+      :filterable="true"
       :loading="loading"
-      :remote="filter"
-      :remote-method="remoteMethod"
+      :remote="true"
+      :remote-method="remoteOptionsLoading"
       value-key="optionValue"
-      :clearable="item.type !== 'array'"
-      @clear="onClear"
-      @change="onChange"
-      @focus="onFocus"
+      :clearable="fieldModel.type !== 'array'"
+      @clear="onSimpleSelectClear"
+      @change="onSimpleSelectChange"
+      @focus="onSimpleSelectFocus"
     >
       <slot v-for="(opt,optidx) in options">
         <div
@@ -49,10 +49,10 @@
           {{ opt.optionGroup }}
         </div>
         <el-option
-          v-if="isOptDeselect(opt.optionValue)"
+          v-if="optionIsSelectable(opt.optionValue)"
           :key="optidx"
           :label="opt.optionDisplay"
-          :value="item.type === 'array' ? opt : opt.optionValue"
+          :value="fieldModel.type === 'array' ? opt : opt.optionValue"
         >
           <span style="float: left">{{ opt.optionDisplay }}</span>
           <span style="float: right; color: #8492a6; font-size: 13px">{{ opt.optionValue }}</span>
@@ -63,33 +63,23 @@
 </template>
 <script>
 import FormApi from '@/apis/formApi'
+import BaseFormGenerator from '../BaseFormGenerator'
 import DynamicFilterForm from './DynamicFilterForm'
+import * as formUtil from '@/utils/formUtils.js'
 
 export default {
-  components: { DynamicFilterForm, BaseFormGenerator: () => import('../BaseFormGenerator') },
+  components: {
+    DynamicFilterForm,
+    BaseFormGenerator
+  },
   model: {
-    prop: 'selected',
     event: 'change'
   },
   props: {
-    selected: {
-      type: [Object, String, Array],
-      default: null
-    },
-    item: {
+    fieldModel: {
       type: Object,
       default: null,
       required: true
-    },
-    filter: {
-      type: Boolean,
-      default: true,
-      required: true
-    },
-    state: {
-      type: Boolean,
-      default: false,
-      required: false
     },
     columns: {
       type: Array,
@@ -115,84 +105,64 @@ export default {
     }
   },
   watch: {
-    item: {
+    fieldModel: {
       immediate: true,
       handler(newv) {
-        if (!newv) return
-        this.api = new FormApi(
-          this.$route.params.form_name || this.$route.query.formName
-        )
-
-        var isInit = true
-
-        if (newv.type === 'object') {
-          if (newv.prepareData && newv.prepareData.options) {
-            this.options.push(newv.prepareData.options)
-            isInit = false
+        if (!newv) {
+          return
+        }
+        console.log('字段定义发生变化：')
+        console.log(newv)
+        if (!newv['__initialized']) {
+          newv['__initialized'] = true
+          if (newv.type === 'object') {
+            if (newv.value) {
+              this.options.push(newv.value)
+              this.value = newv.value.optionValue
+            }
+          }
+          if (newv.dynamicFilterFormClass) {
+            this.dynamicFilterFormClass = formUtil.parseFormClass(newv.dynamicFilterFormClass)
+          }
+          if (newv.listItemCreationFormClass) {
+            this.listItemCreationFormClass = formUtil.parseFormClass(newv.listItemCreationFormClass)
+            this.listItemCreationFormClass.eventFormType = 'EDIT'
           }
         }
-
-        if (newv.dynamicFilterFormClass) {
-          this.dynamicFilterFormClass = JSON.parse(newv.dynamicFilterFormClass)
-        }
-
-        if (newv.listItemCreationFormClass) {
-          this.listItemCreationFormClass = JSON.parse(newv.listItemCreationFormClass)
-          this.listItemCreationFormClass.eventFormType = 'EDIT'
-        }
-        this.value = this.selected
-        // if (!this.filter) {
-        this.loadData(isInit)
-        // }
       }
     }
   },
+  created() {
+    this.formApi = new FormApi(
+      this.$route.params.form_name || this.$route.query.formName
+    )
+  },
   methods: {
-    isOptDeselect(optValue) {
-      if (this.options.length === 1) return true // 解决如果可选和已选只有一个的情况被隐藏问题
-      if (!this.item.value) return true
-      return !(this.item.value.indexOf(optValue) > -1)
+    optionIsSelectable(optValue) {
+      if (this.fieldModel.type !== 'array') {
+        return true
+      }
+      // 解决如果可选和已选只有一个的情况被隐藏问题
+      if (!this.fieldModel.value || this.options.length === 1) {
+        return true
+      }
+      return this.$jian.tool.inArray(optValue, this.fieldModel.value) < 0
     },
-    loadData(isInit) {
-      this.loading = true
-
+    remoteOptionsLoading(query) {
       var form = {}
       if (this.queryData) {
         for (const item of this.queryData) {
           form[item.key] = item.value
         }
       }
-      this.api.loadFormFieldOptionsWithQuery(this.item.fieldTypeKey, '', this.$route.query.formId, form)
-        .then(res => {
-          this.loading = false
-          if (!res.data) return
-          if (!isInit) {
-            this.options = this.options.concat(res.data)
-          } else {
-            this.options = res.data
-          }
-          this.$forceUpdate()
-        })
-    },
-    remoteMethod(query) {
-      if (query !== '') {
-        this.loading = true
-        var form = {}
-        if (this.queryData) {
-          for (const item of this.queryData) {
-            form[item.key] = item.value
-          }
-        }
-        this.api.loadFormFieldOptionsWithQuery(this.item.fieldTypeKey, query, this.$route.query.formId, form).then(res => {
-          if (!res.data) return
-          this.options = res.data
-          this.loading = false
-        }).catch(res => {
-          this.loading = false
-        })
-      } else {
-        this.options = []
-      }
+      this.loading = true
+      this.formApi.loadFormFieldOptionsWithQuery(this.fieldModel.fieldTypeKey, query, this.$route.query.formId, form).then(res => {
+        if (!res.data) return
+        this.options = res.data
+        this.loading = false
+      }).finally(res => {
+        this.loading = false
+      })
     },
     handleAdded(e) {
       if (typeof this.performData === 'object' && this.listItemCreationFormClass) {
@@ -201,22 +171,19 @@ export default {
 
       this.showFormDialog = false
       for (const o of this.performData) {
-        this.onChange(o)
+        this.onSimpleSelectChange(o)
       }
     },
-    onChange(e) {
-      // console.log(e)
+    onSimpleSelectChange(e) {
       this.$emit('change', e)
       this.$forceUpdate()
     },
-    onClear(e) {
+    onSimpleSelectClear(e) {
       this.value = null
       this.$forceUpdate()
     },
-    onFocus(e) {
-      if (this.dynamicFilterFormClass) {
-        this.remoteMethod()
-      }
+    onSimpleSelectFocus(e) {
+      this.remoteOptionsLoading()
     }
   }
 }

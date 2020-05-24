@@ -5,6 +5,7 @@ import Layout from '@/views/appLayout/main.vue'
 import userRouter from './modules/user'
 import appRouter from './modules/project'
 import store from '@/store'
+import tool from '@/utils/tools.js'
 
 Vue.use(Router)
 
@@ -72,7 +73,6 @@ const router = new Router(RouterConfig)
 
 export default router
 
-const prefixTitle = window.$title + ' - '
 router.beforeEach((to, from, next) => {
   if (to.name === 'Login' && from.name !== 'Login' && !to.query.redirect) { // 跳登录把redirect页面带过去
     next({ path: '/Login', query: { redirect: from.fullPath }})
@@ -82,7 +82,6 @@ router.beforeEach((to, from, next) => {
   if (to.name === 'Dashboard') {
     store.commit('uiControl/setCurrentMenuInit')
   }
-
-  document.title = prefixTitle + (to.meta.title || to.query.name)
+  document.title = tool.title(to.meta.title || to.query.name, true)
   next()
 })

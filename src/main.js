@@ -2,6 +2,7 @@ import Vue from 'vue'
 import App from './App.vue'
 import router from './router'
 import store from './store/index'
+import tool from './utils/tools.js'
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
 
@@ -17,7 +18,9 @@ window.$encodeResultPageArg = function(eventResult) {
 }
 
 Vue.use(ElementUI)
-
+Vue.prototype.$jian = {
+  'tool': tool
+}
 new Vue({
   router,
   store,

@@ -3,6 +3,26 @@ const tool = {
     return navigator.userAgent.toLowerCase().indexOf('firefox') > -1
   },
 
+  /**
+   * 基于 JSON 的数据复制
+   * @param {Object} data
+   */
+  jsonCopy(data) {
+    return JSON.parse(JSON.stringify(data))
+  },
+
+  /**
+   * 获取标题
+   * @param {String} subtitle
+   */
+  title(subtitle, apply) {
+    var title = (window.$title || '简流程') + ' - ' + this.stringify(subtitle)
+    if (apply === true) {
+      document.title = title
+    }
+    return title
+  },
+
   /* check string */
   isString(data) {
     return typeof (data) === 'string'
@@ -37,7 +57,7 @@ const tool = {
 
   /* trim space on starts and ends */
   trim(str) {
-    return this.remove(str, /^\s+|\s+$/)
+    return this.remove(/^\s+|\s+$/, str)
   },
 
   /* replace all $regex to empty */
@@ -52,7 +72,14 @@ const tool = {
 
   /* check blank */
   isBlank(v) {
-    return this.trim(this.stringify(v)).length === 0
+    return this.trim(v).length === 0
+  },
+
+  /**
+   * default if blank
+   */
+  ifBlank(val, def) {
+    return this.isBlank(val) ? def : val
   },
 
   /* check is boolean */
@@ -63,6 +90,88 @@ const tool = {
   looksLikeInteger(data) {
     return !!(((this.isNumber(data) || this.isString(data)) &&
       (data + '').match(/^[\-|\+]?\d+$/)))
+  },
+
+  /**
+   * Check functiona
+   */
+  isFunction(func) {
+    // console.log("Tool: checking function")
+    // console.log(typeof func)
+    return typeof func === 'function'
+  },
+
+  /**
+   * 判断是否为标准数组，参考 jQuery 的实现
+   */
+  isArray(data) {
+    if (this.isUndefOrNull(data)) {
+      return false
+    }
+    if (Array.isArray) {
+      return Array.isArray(data)
+    }
+    return this.toLower(data) === '[object array]'
+  },
+
+  /**
+   * 判断是否被数组包含，通过 checker 参数可自定义比较规则
+   * @param {Object} val
+   * @param {Array} arr
+   * @param {Function} checker
+   * @return 返回匹配的首个数组下标，不包含则返回 -1
+   */
+  inArray(val, arr, checker) {
+    if (!this.isFunction(checker)) {
+      checker = function(a, b) {
+        return a === b
+      }
+    }
+    if (this.isArray(arr) && arr.length > 0) {
+      for (var i = 0; i < arr.length; i++) {
+        if (checker.call(this, arr[i], val)) {
+          return i
+        }
+      }
+    }
+    return -1
+  },
+
+  /**
+   * 判断是否为纯粹对象，参考 jQuery 的实现
+   */
+  isPlainObject(obj) {
+    // 先确认是有效的对象
+    if (!obj || this.toLower(obj) !== '[object object]') {
+      return false
+    }
+
+    // 获取对象原型
+    var protoType = Object.getPrototypeOf(obj)
+
+    // 如果对象没有原型，那也算纯粹的对象，比如用 Object.create(null) 这种方式创建的对象
+    if (!protoType) {
+      return true
+    }
+
+    // 最后判断是不是通过 "{}" 或 "new Object" 方式创建的对象：
+    //       判断给定对象的构造函数是否与 Object 的相同
+    var constructor = Object.hasOwnProperty.call(protoType, 'constructor') && protoType.constructor
+
+    // 通过调用 Function.prototype.toString 方法来确认构造器函数是否返回相同的字串值：类似 - "function Object() { [native code] }"
+    var fun2String = Object.hasOwnProperty.toString
+    return typeof constructor === 'function' && fun2String.call(constructor) === fun2String.call(Object)
+  },
+
+  /**
+   * default if a === b
+   * @param {Object} a
+   * @param {Object} b
+   * @param {Object} deflt
+   * @return a === b ? deflt : a
+   */
+  defaultIfEquals(a, b, deflt) {
+    return a === b ? deflt : a
   },
 
   /* check own property */
@@ -168,6 +277,52 @@ const tool = {
   /* to upper case */
   toUpper(str) {
     return this.stringify(str).toUpperCase()
+  },
+
+  /**
+   * 用指定字符进行固定长度的前补全
+   */
+  lengthPrefixed(val, length, chr) {
+    val = this.stringify(val)
+    chr = this.stringify(chr)
+    if (chr.length <= 0) {
+      chr = ' '
+    }
+    while (val.length < length) {
+      val = chr + val
+    }
+    return val
+  },
+
+  /**
+   * 数组排序并去重
+   * @param {Array} arr
+   * @param {Function} checker
+   * @param {Boolean} nocopy
+   */
+  arraySortAndUnique(arr, checker, nocopy) {
+    if (!this.isArray(arr)) {
+      return
+    }
+    if (this.isBoolean(checker)) {
+      nocopy = checker
+    }
+    var uniqued = arr
+    if (!nocopy) {
+      uniqued = arr.concat([])
+    }
+    uniqued.sort()
+    if (!this.isFunction(checker)) {
+      checker = function(a, b) {
+        return a === b
+      }
+    }
+    for (var i = uniqued.length - 1; i >= 0; i--) {
+      if (i > 0 && checker.call(this, uniqued[i], uniqued[i - 1])) {
+        uniqued.splice(i, 1)
+      }
+    }
+    return uniqued
   },
 
   /* 给数字中添加逗号 */

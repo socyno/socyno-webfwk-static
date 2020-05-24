@@ -10,7 +10,13 @@
     >
       <slot v-for="(item, idx) in queryData">
         <!-- 详情页面下如果是tableview && array 则过滤掉readonly -->
-        <el-form-item v-show="type !== 'submit' && idx >= itemsCntByRow ? !isFold : !item.readonly || (item.comType === 'tableView' && item.type === 'array')" :key="idx" :class="item.isRequired ? 'is-required' : ''" :label="item.title" :prop="item.key">
+        <el-form-item
+          v-show="type !== 'submit' && idx >= itemsCntByRow ? ! fieldsWillFold : !item.readonly || (item.comType === 'tableView' && item.type === 'array')"
+          :key="idx"
+          :class="item.required ? 'is-required' : ''"
+          :label="item.title"
+          :prop="item.key"
+        >
           <el-input
             v-if="item.comType === 'input'"
             v-model="item.value"
@@ -93,38 +99,42 @@
             @input="$forceUpdate()"
           />
 
-          <FormUploader v-if="item.comType === 'file'" v-model="item.value" :item="item" :files="item.value" />
-          <div v-if="item.comType === 'fileList'">
-            <FormUploader v-model="item.value" :item="item" has-table :files="defaultData[item.key]" />
-          </div>
-
-          <ProductLineSelect v-if="item.comType === 'productline'" v-model="item.value" @change="productLineOnchage" />
-          <SystemSelect v-if="item.comType === 'system'" v-model="item.value" :productline-id="seletedProductLine" />
-          <SystemCascader v-if="item.comType === 'cascaderSystem'" v-model="item.value" />
-          <InviewTable v-if="item.comType === 'tableView'" v-model="item.value" :can-edit="!item.readonly" :data="item" :prepare-data="mergedPrepareData()" />
+          <FormUploader
+            v-if="item.comType === 'file'"
+            v-model="item.value"
+            has-table
+            :item="item"
+            :files="getDefaultValue(item)"
+          />
+          <InviewTable
+            v-if="item.comType === 'tableview'"
+            v-model="item.value"
+            :can-edit="!item.readonly"
+            :data="item"
+            :prepare-data="defaultData"
+          />
           <DynamicSelect
             v-if="item.comType === 'dynamicSelect'"
             v-model="item.value"
-            :item="item"
-            :filter="item.fieldType !== 'FormState'"
-            :state="item.fieldType === 'FormState'"
+            :field-model="item"
             :query-data="queryData"
           />
         </el-form-item>
-        <el-form-item v-if="defaultData" v-show="type === 'submit' && item.readonly && !(item.comType === 'tableView' && item.type === 'array')" :label="item.title">
-          {{ item.key === 'state' ? data.prepareData[item.key] : defaultData[item.key] }}
+        <el-form-item v-show="type === 'submit' && item.readonly && !(item.comType === 'tableview' && item.type === 'array')" :label="item.title">
+          {{ item.textDisplay }}
         </el-form-item>
       </slot>
 
-      <el-form-item v-if="data.eventFormType === 'EDIT' || type != 'submit'" class="btns">
+      <el-form-item v-if="formClass.eventFormType === 'EDIT' || type != 'submit'" class="btns">
         <el-button type="primary" :loading="isSubmitLoading" @click="onSubmit">
-          {{ type != 'submit' ? '查询' : '确认' }}
+          {{ type != 'submit' ? '查询' : '提交' }}
         </el-button>
         <el-button type="info" @click="onReset">
           {{ type != 'submit' ? '重置' : '取消' }}
         </el-button>
-        <el-button v-if="queryData.length >= 4 && type != 'submit'" type="text" @click="isFold = !isFold">
-          {{ isFold ? '展开' : '收起' }}
+        <!-- 作为筛选表单用途时，如果长度超过 4， 则有收起和展开的功能 -->
+        <el-button v-if="type != 'submit' && queryData.length > itemsCntByRow" type="text" @click="fieldsWillFold = !fieldsWillFold">
+          {{ fieldsWillFold ? '展开' : '收起' }}
         </el-button>
       </el-form-item>
     </el-form>
@@ -134,6 +144,8 @@
 import DynamicSelect from '../BaseFormItem/DynamicSelect'
 import InviewTable from '../BaseFormItem/InviewTable'
 import FormUploader from '../BaseFormItem/FormUploader'
+import tool from '@/utils/tools'
+import * as formUtil from '@/utils/formUtils'
 export default {
   name: 'BaseFormGenerator',
   components: {
@@ -143,27 +155,31 @@ export default {
   },
   props: {
     /**
-     * json parse过的formClass
+     * 视图模型
      */
-    data: {
+    formClass: {
       type: Object,
-      default: null,
+      default: function() {
+        return {}
+      },
       required: true
     },
     /**
-     * 用来区分是filter还是submit排版
+     * 查询或是提交（filter || submit）
      */
-    type: { // filter | submit
+    type: {
       type: String,
       default: 'filter',
       required: false
     },
     /**
-     * 用来取detail中的值
+     * 初始化数据
      */
     defaultData: {
       type: Object,
-      default: null
+      default: function() {
+        return {}
+      }
     },
     isSubmitLoading: {
       type: Boolean,
@@ -172,100 +188,31 @@ export default {
   },
   data() {
     return {
-      isFold: true,
-      seletedProductLine: null,
       formInline: {},
       queryData: [],
-      fileList: [],
-      fileResultData: {},
-      itemsCntByRow: 3
+      itemsCntByRow: 3,
+      fieldsWillFold: true
     }
   },
   watch: {
-    data: {
+    formClass: {
       immediate: true,
-      handler(query) {
-        if (!query || !query.type) {
+      handler(clazz) {
+        if (!clazz || !clazz.type || !clazz.properties) {
           return
         }
-        var tempArr = []
-        for (const key in query.properties) {
-          var item = query.properties[key]
-          // console.log('获取到的界面字段定义如下：' + key + ' => ')
-          // console.log(item)
-          if (!item.position || item.position <= 0) {
-            continue
-          }
-          switch (item.fieldType) {
-            case '':
-            case 'simple':
-            case 'string':
-            case 'textline':
-              if (item.fieldOptionsType === 'STATIC') {
-                if (item.type === 'array' && item.staticOptions && item.staticOptions.length) {
-                  item.comType = 'checkbox'
-                } else {
-                  item.comType = 'select'
-                }
-              } else if (item.fieldOptionsType === 'DYNAMIC') {
-                item.comType = 'dynamicSelect'
-              } else if (item.type === 'boolean') {
-                item.comType = 'switch'
-              } else {
-                item.comType = 'input'
-              }
-              break
-            case 'password':
-              item.comType = 'password'
-              break
-            case 'text': // 长文本
-              item.comType = 'areaText'
-              break
-            case 'file': // 文件上传
-              item.comType = 'file'
-              break
-            case 'tableview':
-              if (item.type === 'array') {
-                if (item.staticOptions && item.staticOptions.length) {
-                  item.comType = 'checkbox'
-                } else {
-                  item.comType = 'tableView'
-                }
-              } else {
-                item.comType = 'dynamicSelect'
-              }
-              break
-            case 'dateonly':
-              item.comType = 'DateOnly'
-              break
-            case 'datetime':
-              item.comType = 'DateTime'
-              break
-            case 'timeonly':
-              item.comType = 'TimeOnly'
-              break
-            default:
-              break
-          }
-
-          item.key = key
-          item.value = this.getDefaultValue(item)
-
-          if (query.required && query.required.length) { // 必填字段
-            for (const requiredKey of query.required) {
-              if (item.key === requiredKey) {
-                item.isRequired = true
-              }
-            }
-          }
-          tempArr.push(item)
+        this.queryData = tool.jsonCopy(formUtil.getSortedVisibleColumns(clazz))
+      }
+    },
+    defaultData: {
+      immediate: true,
+      handler(data) {
+        for (const field of this.queryData) {
+          field.value = this.getDefaultValue(field)
+          field.textDisplay = formUtil.getFieldValueDisplay(field, field.value)
         }
-
-        tempArr.sort((a, b) => { // 排序
-          return a.position - b.position
-        })
-
-        this.queryData = tempArr
+        console.log('操作或查询视图界面元数据（queryData）如下：')
+        console.log(this.queryData)
       }
     }
   },
@@ -283,117 +230,48 @@ export default {
     }
   },
   methods: {
-    mergedPrepareData() {
-      if (this.data.prepareData && this.defaultData) {
-        var ret = {}
-        Object.assign(ret, this.defaultData)
-        Object.assign(ret, this.data.prepareData)
-        return ret
-      } else {
-        return (this.data.prepareData || this.defaultData) || {}
-      }
-    },
-    getDefaultValue(item) {
+    getDefaultValue(fieldDefinition) {
       var value = null
-      // if (item.readonly && item.isRequired !== true) {
-      //   return value
-      // }
-
-      var prepareData = {}
-      if (this.defaultData && this.defaultData.hasOwnProperty(item.key)) {
-        value = this.defaultData[item.key]
+      var fieldKey = fieldDefinition.key
+      if (this.defaultData && this.defaultData.hasOwnProperty(fieldKey)) {
+        value = this.defaultData[fieldKey]
       }
-
-      if (this.data.prepareData && this.data.prepareData.hasOwnProperty(item.key)) { // remote search select or file or something
-        value = this.defaultData[item.key]
-        Object.assign(prepareData, this.data.prepareData[item.key])
-      }
-
-      if (item.type === 'object' && value) {
-        prepareData.options = value
-        value = value.optionValue || value
-      }
-
-      item.prepareData = prepareData
-
-      if (item.type === 'boolean') {
+      var fieldType = fieldDefinition.type
+      if (fieldType === 'boolean') {
         return !value ? false : value
       }
-
-      if (item.type === 'array') {
-        if (item.fieldType === 'TableView' && item.staticOptions && item.staticOptions.length) {
-          return value || []
-        } else if (item.staticOptions && item.staticOptions.length) {
-          return value || []
-        }
-        return {}
+      if (fieldType === 'array') {
+        return value || []
       }
-
-      // 非数组一律强转
-      return value !== null ? value + '' : ''
-    },
-    onFileUploaded(response, file, fileList) {
-      // console.log('--==--',response, file, fileList)
-      if (response.data && response.data.length) {
-        this.fileResultData[file.uid] = response.data[0]
+      if (fieldType === 'object') {
+        return value || {}
       }
-    },
-    onFileRemoved(file, fileList) {
-      if (this.fileResultData.hasOwnProperty(file.uid)) {
-        delete this.fileResultData[file.uid]
-      }
-    },
-    productLineOnchage(e) {
-      this.seletedProductLine = e
+      return tool.stringify(value)
     },
     onReset() {
-      // window.location.reload()
-      // this.queryData = null
       this.$emit('cancle')
     },
     onSubmit() {
-      var form = {}
-      var isValidPass = true
-
       var validation = function(item) {
-        if (item.comType === 'file' || item.comType === 'fileList') { // 只支持一个文件上传的控件,这个判断必须放第一个
-          var temp = [] // 把item.value里边的文件id取出来用来post
-          for (const key in item.value) {
-            if (item.value.hasOwnProperty(key)) {
-              const element = item.value[key]
-              temp.push({ id: element.id })
-            }
-          }
-          item.value = temp
-          return true
-        }
-        if (item.value === null || item.value === undefined) {
-          return false
-        }
-        if (typeof item.value === 'string' && !item.value.length) {
+        if (tool.isBlank(item.value)) {
           return false
         }
         return true
       }
 
+      var form = {}
       for (const item of this.queryData) {
         if (this.type === 'submit') {
-          if (item.isRequired) {
+          if (item.required) {
             if (!validation(item)) {
-              isValidPass = false
-              this.$message.error(item.title + '不能为空')
-              break
+              this.$message.error('字段（' + item.title + '）不能为空')
+              return
             }
           }
         }
-
-        if (validation(item)) {
-          form[item.key] = item.value.optionValue || item.value
-        }
+        form[item.key] = item.value
       }
-      if (isValidPass) {
-        this.$emit('input', form)
-      }
+      this.$emit('input', form)
     }
   }
 }
@@ -409,7 +287,7 @@ export default {
     .el-select,
     .el-input,
     .el-range-editor--mini.el-input__inner {
-      width: 230px;
+      width: 200px;
     }
   }
 

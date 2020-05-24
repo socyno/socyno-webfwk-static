@@ -1,7 +1,7 @@
 <template>
   <div class="form-create">
     <el-page-header class="common-page-header" :content="action.display" @back="$router.go(-1)" />
-    <BaseFormGenerator v-model="filterParams" type="submit" :data="action.formClass" @input="handleSubmit" @cancle="$router.go(-1)" />
+    <BaseFormGenerator v-model="filterParams" type="submit" :form-class="action.formClass" @input="handleSubmit" @cancle="$router.go(-1)" />
   </div>
 </template>
 <script>
@@ -28,8 +28,6 @@ export default {
     })
     this.formApi.loadAction(this.$route.params['form_action']).then(action => {
       this.action = action
-      // console.log(action)
-      document.title = window.$title + ' - ' + action.display
     }).finally(res => {
       loading.close()
     })
@@ -41,7 +39,7 @@ export default {
         lock: true,
         text: 'Loading'
       })
-      this.formApi.postCreateAction(this.$route.params.form_action, params).then(res => {
+      this.formApi.postTrigger(this.$route.params.form_action, { form: params, message: '' }).then(res => {
         this.$message.success('表单提交成功')
         this.$router.go(-1)
       }).finally(res => {
