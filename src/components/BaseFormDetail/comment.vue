@@ -1,18 +1,10 @@
 <template>
-  <div class="form-log">
-    <el-table v-loading="loading" :data="formLogsData" border>
-      <el-table-column label="编号" prop="id" />
-      <el-table-column label="操作人" prop="operateUserDisplay" />
-      <el-table-column label="操作时间" prop="operateTime" />
-      <el-table-column label="操作类型" prop="operateType" />
-      <el-table-column label="操作说明" prop="operateDesc" />
-      <el-table-column label="操作" width="80">
-        <template slot-scope="scope">
-          <el-button v-if="scope.row.operateDetailId" type="text" size="small" @click="showLogsDetail(scope.row.operateDetailId)">
-            详情
-          </el-button>
-        </template>
-      </el-table-column>
+  <div v-show="formLogsData" v-loading="loading" class="form-comment-lists">
+    <el-table :data="formLogsData" border>
+      <el-table-column label="编号" prop="id" width="100" />
+      <el-table-column label="创建人" prop="operateTime" width="200" />
+      <el-table-column label="操作时间" prop="operateUserDisplay" width="200" />
+      <el-table-column label="注释内容" prop="operateDesc" show-overflow-tooltip />
     </el-table>
     <el-button-group>
       <el-button type="normal" size="small" icon="el-icon-arrow-left" @click="pageLogsLoad('')">
@@ -28,28 +20,10 @@
         当前: 第 {{ logsPager.page }} 页 {{ formLogsData ? formLogsData.length : 0 }} 条
       </el-button>
     </el-button-group>
-    <el-dialog class="imagelogdiv" title="操作日志" :modal-append-to-body="false" :visible.sync="detailDialogShow">
-      <div class="bjt">
-        <label style="float:left;">修改前：</label>
-        <label style="float:right;">修改后：</label>
-      </div>
-      <div id="formActionLogDetailContent" />
-    </el-dialog>
   </div>
 </template>
 <script>
-import { Loading } from 'element-ui'
 import FormApi from '@/apis/formApi'
-import CodeMirror from 'codemirror'
-import 'codemirror/lib/codemirror.css'
-import 'codemirror/addon/merge/merge.js'
-import 'codemirror/addon/merge/merge.css'
-
-import DiffMatchPatch from 'diff-match-patch'
-window.diff_match_patch = DiffMatchPatch
-window.DIFF_DELETE = -1
-window.DIFF_INSERT = 1
-window.DIFF_EQUAL = 0
 export default {
   props: {
     formName: {
@@ -57,7 +31,7 @@ export default {
       required: true
     },
     formId: {
-      type: String,
+      type: [Number, String],
       required: true
     }
   },
@@ -67,7 +41,6 @@ export default {
       formApi: null,
       fromIndex: 0,
       formLogsData: null,
-      detailDialogShow: false,
       logsPager: {
         page: 1,
         firstLogId: 0,
@@ -100,7 +73,7 @@ export default {
     }
   },
   mounted() {
-    // console.log(`表单日志页面加载完成: form = ${this.formName}, fromId = ${this.formId}, fromIndex = ${this.fromIndex}`)
+    // console.log(`表单注释加载完成: form = ${this.formName}, fromId = ${this.formId}, fromIndex = ${this.fromIndex}`)
     this.formApi = new FormApi(this.formName)
     this.loadFormLogs()
   },
@@ -110,7 +83,7 @@ export default {
      */
     loadFormLogs(noMoreHidden) {
       this.loading = true
-      this.formApi.loadFormActionLogs(this.formId, this.fromIndex).then(data => {
+      this.formApi.loadComments(this.formId, this.fromIndex).then(data => {
         if (!data || data.length < 1) {
           this.logsPager.nomore = true
           if (noMoreHidden !== true && this.fromIndex > 0) {
@@ -134,33 +107,6 @@ export default {
       })
     },
     /**
-     * 加载操作日志变更详情
-     */
-    showLogsDetail(detailId) {
-      this.detailDialogShow = true
-      var loading = Loading.service({
-        fullscreen: true,
-        text: '请求中…',
-        background: 'rgba(0, 0, 0, 0.1)'
-      })
-      this.formApi.loadFormActionLogDetail(this.formId, detailId).then(data => {
-        const target = document.getElementById('formActionLogDetailContent')
-        target.innerHTML = ''
-        CodeMirror.MergeView(target, {
-          value: data.operateBefore || '', // 上次内容
-          origLeft: null,
-          orig: data.operateAfter || '', // 本次内容
-          lineNumbers: true, // 显示行号
-          mode: 'text/plain',
-          highlightDifferences: true,
-          connect: 'align',
-          readOnly: true // 只读 不可修改
-        })
-      }).finally((res) => {
-        loading.close()
-      })
-    },
-    /**
      * 翻页方向（prev 向前，next 向后，first 首页）
      * @param {String} direction prev / next /first
      */
@@ -176,22 +122,3 @@ export default {
   }
 }
 </script>
-<style lang="scss" scoped>
-.bjt {
-    overflow: hidden;
-    margin-top: -30px;
-    border-top:1px solid #eee;
-    padding: 10px 38% 10px 0;
-    font-size: 16px;
-    color: #aaa;
-  }
-</style>
-<style lang='scss'>
-.el-dialog__header{
-  border-bottom: 1px solid #ddd;
-}
-
-.imagelogdiv .el-dialog {
-  width: 80% !important;
-}
-</style>

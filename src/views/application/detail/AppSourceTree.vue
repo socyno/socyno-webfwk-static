@@ -1,5 +1,5 @@
 <template>
-  <div class="application-detail-files-tree">
+  <div class="application-source-tree">
     <el-table v-loading="loading" :data="tableData" style="width: 100%">
       <el-table-column prop="name" label="Name" width="300">
         <template slot-scope="scope">
@@ -69,8 +69,7 @@ export default {
       getDirs(this.app.id, path, branch).then(res => {
         this.tableData = res.data
         this.$emit('input', path.length ? path.split('/') : [])
-        this.loading = false
-      }).catch(e => {
+      }).finally(() => {
         this.loading = false
       })
     },
@@ -80,21 +79,21 @@ export default {
         this.reloadDir(row.path, this.branch)
       } else {
         getFileContent(this.app.id, row.path, this.branch).then(res => {
-          this.loading = false
           var str = ''
           try {
             const bytesView = new Uint8Array(res.data)
             str = new TextDecoder().decode(bytesView)
           } catch (error) {
+            // eslint-disable-next-line
+            console.error(error)
             this.$message.info('该文件无法预览.')
-            throw (error)
           }
           if (str.length) {
             this.dialogVisible = true
             this.currentFile = row.path
             this.codeStr = str
           }
-        }).catch(e => {
+        }).finally(() => {
           this.loading = false
         })
       }
@@ -115,7 +114,7 @@ export default {
     overflow: auto;
     padding: 10px;
 }
-.application-detail-files-tree {
+.application-source-tree {
   .el-table {
     width: 100%;
     border-radius: 3px;

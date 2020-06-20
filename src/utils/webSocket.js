@@ -1,15 +1,23 @@
-import {
-  MessageBox
-} from 'element-ui'
+import store from '@/store'
+import parser from 'url-parse'
+import tool from './tools'
+import { MessageBox } from 'element-ui'
 /**
  *  拼装当前应用的 WebSocket 请求地址。
  */
 function getCurrentWebSocketUrl(url) {
   var protocol = 'ws'
-  if (location.protocol.toLowerCase().indexOf('https') >= 0) {
+  var baseUrl = parser(store.getters['user/getApiUrl']())
+  if (tool.toLower(baseUrl.protocol).indexOf('https') >= 0) {
     protocol = 'wss'
   }
-  return protocol + '://' + location.host + url
+  var tokenStr = store.getters['user/getToken']()
+  var tokenHeaderStr = store.getters['user/getTokenHeader']()
+  if (tokenStr && tokenHeaderStr) {
+    url = tool.setUrlParam('__' + tokenHeaderStr, tokenStr, url)
+  }
+  return protocol + '://' + baseUrl.host +
+        '/' + tool.remove(/^\/+/, url)
 }
 
 /**
@@ -20,6 +28,7 @@ function getCurrentWebSocketUrl(url) {
  *       websocket : WebSocket 连接
  *       isOnOpen  : 标注是否为连接创建时间触发的调用（此时message为空），便于用户发起请求。
  */
+
 export function CommonWebSocket(url, handler) {
   if (!('WebSocket' in window)) {
     alert('当前浏览器不支持 WebSocket 特性')
@@ -30,7 +39,7 @@ export function CommonWebSocket(url, handler) {
   var mesageEnd = false
 
   // 消息的处理程序
-  var messageHandler = messageHandler
+  var messageHandler = handler
 
   // 空闲超时检测定时器
   var idleCheckTimer = null
@@ -47,15 +56,15 @@ export function CommonWebSocket(url, handler) {
       try {
         clearInterval(idleCheckTimer)
       } catch (err) {
-        // console.log(err)
+        // eslint-disable-next-line
+        console.error(err)
       }
     }
     try {
-      mesageEnd = messageHandler('', websocket, true)
+      messageHandler('', websocket, true)
     } catch (err) {
-      mesageEnd = 'Failed to handler when connection opened.'
       // eslint-disable-next-line
-      console.log(err)
+      console.error(err)
     }
     // 添加一个定时器，
     idleCheckTimer = setInterval(function() {
@@ -74,9 +83,8 @@ export function CommonWebSocket(url, handler) {
     try {
       mesageEnd = messageHandler(event.data, websocket, false)
     } catch (err) {
-      mesageEnd = 'Failed to handler when message received.'
       // eslint-disable-next-line
-      console.log(err)
+      console.error(err)
     }
     latestRepsonseTime = new Date().getTime()
   }

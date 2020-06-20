@@ -8,11 +8,14 @@ const tool = {
    * @param {Object} data
    */
   jsonCopy(data) {
+    if (this.isUndef(data) || this.isNull()) {
+      return data
+    }
     return JSON.parse(JSON.stringify(data))
   },
 
   /**
-   * 获取标题
+   * 获取并设置页面标题
    * @param {String} subtitle
    */
   title(subtitle, apply) {
@@ -23,81 +26,172 @@ const tool = {
     return title
   },
 
-  /* check string */
-  isString(data) {
-    return typeof (data) === 'string'
+  /**
+   * 关闭当前窗口
+   */
+  close() {
+    window.location.href = 'about:blank'
+    window.close()
   },
 
-  /* check number */
+  /**
+   * 设置地址栏的HASH
+   * @param {Object} params
+   */
+  setUrlHash(path, params) {
+    var hasUrl = path
+    if (params && this.isPlainObject(params)) {
+      hasUrl += '?' + Object.keys(params).map(key => {
+        return (
+          tool.encodeURI(key) + '=' + tool.encodeURI(params[key])
+        )
+      }).join('&')
+    }
+    history.replaceState({}, null, '#' + this.remove(/^#+/, hasUrl))
+  },
+
+  /**
+   * 检测给定对象是否为字符串
+   * @param {Object} str
+   */
+  isString(str) {
+    return typeof str === 'string'
+  },
+
+  /* 确认对象是否为数字 */
   isNumber(data) {
     return typeof (data) === 'number' && !isNaN(data)
   },
 
-  /* check undefined */
-  isUndef(data) {
-    return typeof (data) === 'undefined'
+  /**
+   * 确认对象是否为 undefined
+   * @param {Object} obj
+   */
+  isUndef(obj) {
+    return typeof obj === 'undefined'
   },
 
-  isNull(data) {
-    return data === null
+  /**
+   * 确认对象是否为 null
+   * @param {Object} obj
+   */
+  isNull(obj) {
+    if (obj === null) {
+      return true
+    }
+    return typeof obj === 'object' && !obj
   },
 
-  /* check null or undefined */
+  /**
+   * 确认对象是否为 null 或 undefined
+   * @param {Object} v
+   */
   isUndefOrNull(v) {
     return this.isUndef(v) || this.isNull(v)
   },
 
-  /* force to string */
+  /**
+   * 确认对象是否为 null 或 undefined，等同于 isUndefOrNull
+   * @param {Object} v
+   */
+  isNullOrUndef(v) {
+    return this.isUndefOrNull(v)
+  },
+
+  /**
+   * 对象强制字串化
+   * @param {Object} str
+   */
   stringify(str) {
     if (this.isUndefOrNull(str)) {
       return ''
     }
-    return '' + str
+    return str + ''
   },
 
-  /* trim space on starts and ends */
+  /**
+   * 强转小写字串
+   * @param {String} str
+   */
+  toLower(str) {
+    return this.stringify(str).toLowerCase()
+  },
+
+  /**
+   * 强转大写字串
+   * @param {String} str
+   */
+  toUpper(str) {
+    return this.stringify(str).toUpperCase()
+  },
+
+  /**
+   * 对象强制字串化并去除首位空白
+   */
+  trim2str(str) {
+    return this.trim(str)
+  },
+
+  /**
+   * 对象强制字串化并去除首位空白
+   */
   trim(str) {
     return this.remove(/^\s+|\s+$/, str)
   },
 
-  /* replace all $regex to empty */
+  /* 将匹配值移除，支持正则表达式 */
   remove(regex, str) {
     return this.stringify(str).replace(regex, '')
   },
 
-  /* check blank */
+  /**
+   * 移除匹配的内容，如果移除成功则返回移除后的值，否则返回null
+   */
+  removeOrNull(regex, str) {
+    str = this.stringify(str)
+    var rmstr = str.replace(regex, '')
+    return rmstr === str ? null : rmstr
+  },
+
+  /* 检测是否为空字符串(undefined/null/empty) */
   isEmpty(v) {
     return this.stringify(v).length === 0
   },
 
-  /* check blank */
-  isBlank(v) {
-    return this.trim(v).length === 0
+  /**
+   * 检测是否为空白字符串
+   */
+  isBlank(str) {
+    return this.trim2str(str).length === 0
   },
 
   /**
-   * default if blank
+   * 当字串为空白时，返回默认值，否则返回输入字串
    */
   ifBlank(val, def) {
     return this.isBlank(val) ? def : val
   },
 
-  /* check is boolean */
-  isBoolean(data) {
-    return typeof (data) === 'boolean'
+  /**
+   * 检测给定对象是否为 Boolean 值
+   */
+  isBoolean(obj) {
+    return typeof obj === 'boolean'
   },
-  /* looks like integer */
+
+  /**
+   * 检测给定对象似整形数字
+   */
   looksLikeInteger(data) {
     return !!(((this.isNumber(data) || this.isString(data)) &&
       (data + '').match(/^[\-|\+]?\d+$/)))
   },
 
   /**
-   * Check functiona
+   * 确认对象是否为函数
+   * @param {Object} func
    */
   isFunction(func) {
-    // console.log("Tool: checking function")
-    // console.log(typeof func)
     return typeof func === 'function'
   },
 
@@ -115,11 +209,11 @@ const tool = {
   },
 
   /**
-   * 判断是否被数组包含，通过 checker 参数可自定义比较规则
-   * @param {Object} val
-   * @param {Array} arr
-   * @param {Function} checker
-   * @return 返回匹配的首个数组下标，不包含则返回 -1
+   * 确认是否被数组包含
+   * @param {Object} val 检测值
+   * @param {Array} array 检测数组
+   * @param {Function} checker 比较函数，默认为  ===
+   * @return 首个匹配的数组下标，否则 -1
    */
   inArray(val, arr, checker) {
     if (!this.isFunction(checker)) {
@@ -168,7 +262,7 @@ const tool = {
    * @param {Object} a
    * @param {Object} b
    * @param {Object} deflt
-   * @return a === b ? deflt : a
+   * @return a === b ? default : a
    */
   defaultIfEquals(a, b, deflt) {
     return a === b ? deflt : a
@@ -179,16 +273,24 @@ const tool = {
     return this.isUndef(obj) ? false : Object.hasOwnProperty.call(obj, pro)
   },
 
-  /* parse integer, if error return NaN */
-  parseInteger(number) {
+  /**
+   * 强制转数字，否则返回 NaN, 或给定的默认值
+   * @param {Object} number
+   * @param {Object} default
+   */
+  parseInteger(number, dflt) {
+    var result = NaN
     try {
-      return parseInt(number)
+      result = parseInt(number)
     } catch (err) {
-      return NaN
+      // No Warn
     }
+    return isNaN(result) && !this.isUndefOrNull(dflt) ? dflt : result
   },
 
-  /* string compare */
+  /**
+   * 比较字串是否相同(可支持大小写忽略及去除首位空白)
+   */
   stringEquals(a, b, ignoreCase, trimed) {
     a = this.stringify(a)
     b = this.stringify(b)
@@ -203,19 +305,30 @@ const tool = {
     return a === b
   },
 
+  /**
+   * 比较字串是否相同(强制大小写忽略)
+   */
   stringEqualsIgnoreCase(a, b) {
     return this.stringEquals(a, b, true, false)
   },
 
+  /**
+   * 比较字串是否相同(强制去除首位空白)
+   */
   stringEqualsTrimed(a, b) {
     return this.stringEquals(a, b, false, true)
   },
 
+  /**
+   * 比较字串是否相同(强制大小写忽略并去除首位空白)
+   */
   stringEqualsTrimedIgnoreCase(a, b) {
     return this.stringEquals(a, b, true, true)
   },
 
-  /* escape & " < > */
+  /**
+   * HTML 转义（ & " < >）
+   */
   escape(data, space) {
     var text = this.stringify(data).replace(/&/g, '&amp;')
       .replace(/>/g, '&gt;')
@@ -229,39 +342,56 @@ const tool = {
     return text
   },
 
-  /* same as escape, but replace ' to &apos; */
+  /**
+   * XML 转义(, ")
+   */
   escapeXML(data, space) {
     return this.escape(data, space).replace(/'/g, '&apos;')
   },
 
-  /* escape for csv text */
-  escapeCSV(str, trimed) {
+  /**
+   * CSV 转义(, ")
+   */
+  escapeCSV(str) {
     str = this.stringify(str).replace(/"/g, '""')
     return str.match(/["\,\s+]/) ? ('"' + str + '"') : str
   },
 
-  /* encode URI */
+  /**
+   * URI 编码（包括 / ? : & = 等特殊符号）
+   * @param {String} str
+   */
   encodeURI(str) {
     return encodeURIComponent(str)
   },
 
-  /* decode URI */
+  /**
+   * URI 解码（包括 / ? : & = 等特殊符号）
+   * @param {String} str
+   */
   decodeURI(str) {
     return decodeURIComponent(str)
   },
 
-  /* escape URL */
+  /**
+   * URL 编码
+   * @param {String} str
+   */
   encodeURL(str) {
     return encodeURI(str)
   },
 
-  /* decode URL */
+  /**
+   * URL 解码
+   * @param {String} str
+   */
   decodeURL(str) {
     return decodeURI(str)
   },
 
-  /* escape regular expression */
-  /* * . ? + $ ^ [ ] ( ) { } | \ / */
+  /**
+   * 正则表达式转义（* . ? + $ ^ [ ] ( ) { } | \ /）
+   */
   escapeREG(str) {
     return this.stringify(str).replace(
       /([\*\.\+\$\^\[\]\(\)\{\}\\\|\/])/g,
@@ -269,20 +399,10 @@ const tool = {
     )
   },
 
-  /* to lower case */
-  toLower(str) {
-    return this.stringify(str).toLowerCase()
-  },
-
-  /* to upper case */
-  toUpper(str) {
-    return this.stringify(str).toUpperCase()
-  },
-
   /**
    * 用指定字符进行固定长度的前补全
    */
-  lengthPrefixed(val, length, chr) {
+  leftPad(val, length, chr) {
     val = this.stringify(val)
     chr = this.stringify(chr)
     if (chr.length <= 0) {
@@ -338,6 +458,77 @@ const tool = {
       b = b.replace(re, '$1,$2$3')
     }
     return a + b + c
+  },
+  /**
+   * 产生唯一串
+   */
+  genUuid() {
+    var s = []
+    var hexDigits = '0123456789abcdef'
+    for (var i = 0; i < 36; i++) {
+      s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1)
+    }
+    s[14] = '4' // bits 12-15 of the time_hi_and_version field to 0010
+    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1) // bits 6-7 of the clock_seq_hi_and_reserved to 01
+    s[8] = s[13] = s[18] = s[23] = '-'
+    return s.join('')
+  },
+  /**
+   * Set url's parameter.
+   * If no url provided, location.href will be used.
+   * @param {String} key
+   * @param {String} value
+   * @param {String} url
+   */
+  setUrlParam(param, value, url) {
+    if ((url = this.trim(this.stringify(url))).length <= 0) {
+      url = location.href
+    }
+    var flagidx = url.indexOf('?')
+    var replstr = this.encodeURI(param) + '=' + this.encodeURI(value)
+    if (flagidx < 0) {
+      return url + '?' + replstr
+    }
+    if (flagidx === url.length - 1) {
+      return url + replstr
+    }
+    var matched
+    var pattern = new RegExp(
+      '([?&])' +
+        this.escapeREG(param) +
+        '(?:=[^&]*)?(&|$)',
+      'g')
+    var replaced = false
+    while ((matched = pattern.exec(url))) {
+      replaced = true
+      url = url.substr(0, pattern.lastIndex - matched[0].length) +
+            matched[1] + replstr + matched[2] +
+            url.substr(pattern.lastIndex)
+      pattern.lastIndex -= matched[0].length - replstr.length - matched[2].length
+    }
+    if (replaced) {
+      return url
+    }
+    if (!this.endsWith(url, '&')) {
+      url += '&'
+    }
+    return url + replstr
+  },
+
+  /**
+   * 打开新的窗口
+   * @param {String} linkUrl
+   */
+  openBlankWindow(linkUrl) {
+    var link = document.createElement('a')
+    link.target = '_blank'
+    document.body.appendChild(link)
+    try {
+      link.href = linkUrl
+      link.click()
+    } finally {
+      document.body.removeChild(link)
+    }
   }
 }
 

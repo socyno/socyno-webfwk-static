@@ -12,7 +12,7 @@
         <IndexAppList />
       </div>
       <div v-else-if="activeIndex==='commits'">
-        <CodeCommitHistory />
+        <AppSourceChanges />
       </div>
       <div v-else-if="activeIndex==='sys'">
         <IndexSystemList />
@@ -27,11 +27,11 @@
 import IndexTodoList from './IndexTodoList'
 import IndexAppList from './IndexAppList'
 import IndexSystemList from './IndexSystemList'
-import CodeCommitHistory from '../application/detail/CodeCommitHistory'
+import AppSourceChanges from '../application/detail/AppSourceChanges'
 export default {
   components: {
     IndexTodoList,
-    CodeCommitHistory,
+    AppSourceChanges,
     IndexAppList,
     IndexSystemList
   },

@@ -1,5 +1,5 @@
 <template>
-  <!-- eslint-disable-next-line vue/no-v-html  -->
+  <!-- eslint-disable-next-line vue/no-v-html -->
   <div v-html="innerHTML" />
 </template>
 <script>
@@ -8,13 +8,13 @@ export default {
   props: {
     template: {
       type: String,
-      default: ``
+      default: ''
     },
-    data: {
+    formData: {
       type: Object,
       default: null
     },
-    options: {
+    fieldModel: {
       type: Object,
       default: null
     }
@@ -25,27 +25,22 @@ export default {
     }
   },
   watch: {
-    data: {
+    formData: {
       immediate: true,
       handler(n, o) {
-        if (n !== null) {
-          this.initData()
-          this.$forceUpdate()
-        }
+        this.initData(n || {})
+        this.$forceUpdate()
       }
     }
-  },
-  mounted() {
-
   },
   methods: {
     initData() {
       if (this.template) {
-        var temp = this.options
-        temp.data = this.data
-        this.innerHTML = laytpl.render(decodeURIComponent(this.template), temp)
+        var tmpldata = this.fieldModel
+        tmpldata.data = this.formData
+        this.innerHTML = laytpl.render(decodeURIComponent(this.template), tmpldata)
       } else {
-        this.innerHTML = this.data
+        this.innerHTML = this.formData
       }
     }
   }

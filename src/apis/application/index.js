@@ -185,3 +185,18 @@ export function getAppCount(applicationId) {
     method: 'get'
   })
 }
+
+export function getAppContainerConfigs(appid) {
+  return request({
+    url: `/sys/applications/${appid}/container/configs`,
+    method: 'get'
+  })
+}
+
+export function getAppDeployNamespaces(appid) {
+  return request({
+    url: `/sys/applications/${appid}/deploy/namespaces`,
+    method: 'get'
+  })
+}
+

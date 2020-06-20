@@ -1,5 +1,11 @@
 <template>
-  <div class="form-log">
+  <div class="form-change-logs">
+    <el-page-header
+      class="common-page-header"
+      title="关闭"
+      :content="formTitle"
+      @back="$emit('back')"
+    />
     <el-table v-loading="loading" :data="formLogsData" border>
       <el-table-column label="编号" prop="id" />
       <el-table-column label="操作人" prop="operateUserDisplay" />
@@ -38,6 +44,7 @@
   </div>
 </template>
 <script>
+import tool from '@/utils/tools'
 import { Loading } from 'element-ui'
 import FormApi from '@/apis/formApi'
 import CodeMirror from 'codemirror'
@@ -57,7 +64,7 @@ export default {
       required: true
     },
     formId: {
-      type: String,
+      type: [Number, String],
       required: true
     }
   },
@@ -66,6 +73,7 @@ export default {
       loading: false,
       formApi: null,
       fromIndex: 0,
+      formTitle: '',
       formLogsData: null,
       detailDialogShow: false,
       logsPager: {
@@ -106,10 +114,18 @@ export default {
   },
   methods: {
     /**
+     * 设置标题
+     */
+    setFormTitle() {
+      this.formTitle = '变更日志 - ' + tool.leftPad(this.formId, 8, 0)
+    },
+
+    /**
      * 加载操作日志数据
      */
     loadFormLogs(noMoreHidden) {
       this.loading = true
+      this.setFormTitle()
       this.formApi.loadFormActionLogs(this.formId, this.fromIndex).then(data => {
         if (!data || data.length < 1) {
           this.logsPager.nomore = true

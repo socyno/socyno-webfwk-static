@@ -1,19 +1,24 @@
 <template>
   <div class="app-detail-status">
-    <el-radio-group v-model="switchSelect" size="small" style="width:320px;" @change="switchChanged">
+    <el-radio-group v-model="switchSelected" size="small" style="width:320px;" @change="switchChanged">
       <el-radio-button v-for="(item, index) in switches" :key="index" :label="item.optionValue">
         {{ item.optionDisplay }}
       </el-radio-button>
     </el-radio-group>
-    <BaseFormDetailGenerator v-if="columns" :columns="columns.formClass" :detail-data="columns.form" />
+    <BaseFormContent
+      v-if="columns"
+      form-name="application"
+      :form-model="columns.formClass"
+      :default-data="columns.form"
+    />
   </div>
 </template>
 <script>
 import { getAppEnv, getAppState } from '@/apis/application/index'
-import BaseFormDetailGenerator from '@/components/BaseFormDetailGenerator'
+import BaseFormContent from '@/components/BaseFormContent'
 export default {
   components: {
-    BaseFormDetailGenerator
+    BaseFormContent
   },
   props: {
     app: {
@@ -23,7 +28,7 @@ export default {
   },
   data() {
     return {
-      switchSelect: '',
+      switchSelected: '',
       switches: [],
       columns: null
     }
@@ -34,15 +39,16 @@ export default {
         return
       }
       this.switches = res.data
-      this.switchSelect = res.data[0].optionValue
-      getAppState(this.app.id, this.switchSelect).then(res => {
+      this.switchSelected = res.data[0].optionValue
+      getAppState(this.app.id, this.switchSelected).then(res => {
         this.columns = res.data
       })
     })
   },
   methods: {
     switchChanged() {
-      getAppState(this.app.id, this.switchSelect).then(res => {
+      this.columns = null
+      getAppState(this.app.id, this.switchSelected).then(res => {
         this.columns = res.data
       })
     }

@@ -22,6 +22,9 @@
       <el-table-column label="操作" width="200">
         <template slot-scope="scope">
           <el-button type="text" size="small">
+            <a target="_blank" :href="`#/form/list/${scope.row.formName}/flowchart`">流程图</a>
+          </el-button>
+          <el-button type="text" size="small">
             <a target="_blank" :href="`#/form/list/${scope.row.formName}`">数据</a>
           </el-button>
           <el-button type="text" size="small">
@@ -46,7 +49,7 @@
         </el-form-item>
         <el-form-item label="后端服务：" prop="formBackend">
           <el-select v-model="addParam.formBackend" placeholder="请选择后端服务">
-            <el-option label="backend" value="default" />
+            <el-option label="srpcloud-backend" value="srpcloud-backend" />
           </el-select>
         </el-form-item>
         <el-form-item label="服务类：" prop="formService">
@@ -74,7 +77,7 @@
 </template>
 <script>
 import { Loading } from 'element-ui'
-import { getFormList, addForm, updateForm, deleteForm, disabledForm } from '@/apis/formControl/index'
+import FormApi from '@/apis/formApi'
 export default {
   data() {
     return {
@@ -105,12 +108,12 @@ export default {
     }
   },
   created() {
-    this.getFormList()
+    this.loadDefinedForms()
   },
   methods: {
-    getFormList() {
-      getFormList().then(res => {
-        this.tableData = res.data
+    loadDefinedForms() {
+      FormApi.loadDefinedForms().then(data => {
+        this.tableData = data
       })
     },
     addClick(isshow) {
@@ -130,8 +133,8 @@ export default {
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        deleteForm(formKey).then(res => {
-          this.getFormList()
+        FormApi.deleteDefinedForm(formKey).then(res => {
+          this.loadDefinedForms()
           this.$message.success('删除成功')
         }).catch(e => {
           this.$message.success('删除失败')
@@ -144,8 +147,8 @@ export default {
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        disabledForm(formName).then(res => {
-          this.getFormList()
+        FormApi.disableDefinedForm(formName).then(res => {
+          this.loadDefinedForms()
           this.$message.success(`${state == null || state ? '禁用' : '启用'}成功`)
         }).catch(e => {
           this.$message.success(`${state == null || state ? '禁用' : '启用'}失败`)
@@ -176,17 +179,17 @@ export default {
               text: '保存中…',
               background: 'rgba(0, 0, 0, 0.1)'
             })
-            // var robj = Object.assign({}, this.addParam)
-            // robj.disabled = robj.disabled === '0'
-            var fun = this.isAdd ? addForm(this.addParam) : updateForm(this.addParam)
-            fun.then(res => {
-              loadObj.close()
-              this.getFormList()
+            var result = this.isAdd
+              ? FormApi.addDefinedForm(this.addParam)
+              : FormApi.updateDefinedForm(this.addParam)
+            result.then(res => {
+              this.loadDefinedForms()
               this.dialogAddVisible = false
-              this.$message.success('保存成功')
+              this.$notify.success('保存成功')
             }).catch(e => {
+              this.$notify.error('保存失败')
+            }).finally(() => {
               loadObj.close()
-              this.$message.success('保存失败')
             })
           })
         }

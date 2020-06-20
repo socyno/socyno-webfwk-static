@@ -73,7 +73,7 @@ import { getAllBranches, getAllTags, getAllPatches, removeBranch, createBranch }
 export default {
   components: {
 
-    BranchSelect: () => import('./BranchesList.vue')
+    BranchSelect: () => import('./AppRepoReferences.vue')
   },
   props: {
     select: {
@@ -121,6 +121,7 @@ export default {
       } else {
         p = p + 1
       }
+      // console.log(p)
       if (p > 1) {
         this.noPrev = false
       } else if (p === 1) {

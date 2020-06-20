@@ -4,9 +4,6 @@
       <div class="panel-top">
         <div class="row-top">
           <div class="left">
-            <!-- <div class="icon">
-              S
-            </div> -->
             <div class="titles">
               <span class="t1" @click="handlePath">{{ app.subsystemName }}</span>
               <span class="t2"> / </span>
@@ -14,6 +11,9 @@
             </div>
           </div>
           <div>
+            <el-button size="small">
+              {{ $enums.getDisplayOrValue('ApplicationState', app.state) }}
+            </el-button>
             <FavoriteButton :is-fav="app.bookmarked" :app-id="app.id" />
           </div>
         </div>
@@ -22,7 +22,7 @@
         </div>
         <div class="row-acts">
           <el-input id="src-addr-input" v-model="app.vcsPath" readonly size="small" placeholder="请输入内容" class="input-with-select common-code">
-            <el-select slot="prepend" v-model="addrTypeSelect" placeholder="请选择">
+            <el-select slot="prepend" value="0" placeholder="请选择">
               <el-option :label="app.vcsType" value="0" />
             </el-select>
             <el-button slot="append" size="small" icon="el-icon-document-copy" @click="handleCopy" />
@@ -47,7 +47,6 @@ export default {
   },
   data() {
     return {
-      addrTypeSelect: '0',
       value: ''
     }
   },

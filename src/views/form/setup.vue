@@ -7,10 +7,10 @@
           <el-tab-pane v-for="(queryData, queryKey, queryIndex) in formQueryViewAttrs" :key="'form-query-tab-' + queryIndex" :label="queryData.display">
             <el-tabs type="border-card">
               <el-tab-pane v-if="queryData.formClass" :key="'form-query-cond-tab' + queryIndex" label="表单视图">
-                <SetupViewPane :form-class="queryData.formClass" :save-click="saveViewAttributes" />
+                <SetupViewPane :form-class="queryData.formClass" @preview="preViewAttributesForEditor" @save="saveViewAttributes" />
               </el-tab-pane>
               <el-tab-pane v-if="queryData.resultClass" :key="'form-query-result-tab' + queryIndex" label="结果视图">
-                <SetupViewPane :form-class="queryData.resultClass" :save-click="saveViewAttributes" />
+                <SetupViewPane :form-class="queryData.resultClass" @preview="preViewAttributes" @save="saveViewAttributes" />
               </el-tab-pane>
             </el-tabs>
           </el-tab-pane>
@@ -22,10 +22,10 @@
           <el-tab-pane v-for="(actionData, actionKey, actionIndex) in formActionViewAttrs" :key="'form-action-tab-' + actionIndex" :label="actionData.display">
             <el-tabs type="border-card">
               <el-tab-pane v-if="actionData.formClass.data" :key="'form-action-cond-tab' + actionIndex" label="表单视图">
-                <SetupViewPane :form-class="actionData.formClass" :save-click="saveViewAttributes" />
+                <SetupViewPane :form-class="actionData.formClass" @preview="preViewAttributesForEventEditor" @save="saveViewAttributes" />
               </el-tab-pane>
               <el-tab-pane v-if="actionData.resultClass.data" :key="'form-action-result-tab' + actionIndex" label="结果视图">
-                <SetupViewPane :form-class="actionData.resultClass" :save-click="saveViewAttributes" />
+                <SetupViewPane :form-class="actionData.resultClass" @preview="preViewAttributes" @save="saveViewAttributes" />
               </el-tab-pane>
             </el-tabs>
           </el-tab-pane>
@@ -33,7 +33,7 @@
       </el-tab-pane>
 
       <el-tab-pane :key="'form-detail-tab'" label="详情视图">
-        <SetupViewPane :form-class="formDetailViewAttrs" :save-click="saveViewAttributes" />
+        <SetupViewPane :form-class="formDetailViewAttrs" @preview="preViewAttributes" @save="saveViewAttributes" />
       </el-tab-pane>
 
       <el-tab-pane :key="'form-extras-tab'" label="关联视图">
@@ -48,7 +48,7 @@
             删除当前视图
           </el-button>
         </div>
-        <SetupViewPane :form-class="formExtraViewAttrs.formClass" :save-click="saveViewAttributes" />
+        <SetupViewPane :form-class="formExtraViewAttrs.formClass" @preview="preViewAttributes" @save="saveViewAttributes" />
       </el-tab-pane>
     </el-tabs>
 
@@ -67,16 +67,46 @@
         </el-form-item>
       </el-form>
     </el-dialog>
+
+    <el-dialog
+      v-if="previewFormModel"
+      :title="`视图预览 - ${(previewFormModel.model && previewFormModel.model.title) || ''}`"
+      :modal-append-to-body="true"
+      :close-on-click-modal="false"
+      :append-to-body="true"
+      :visible.sync="previewFormModel.visible"
+      :width="`${previewFormModel.windowWidth || 80}%`"
+      height="800px"
+    >
+      <BaseFormContent
+        v-if="previewFormModel.style === 'form' && previewFormModel.model"
+        :form-name="formName"
+        :form-model="previewFormModel.model"
+        :default-data="previewFormModel.data"
+        :editable="previewFormModel.editable"
+      />
+      <BaseFormTable
+        v-else-if="previewFormModel.model"
+        :expand-all="true"
+        :data="previewFormModel.data"
+        :columns="previewFormModel.model"
+      />
+    </el-dialog>
   </div>
 </template>
 <script>
+import tool from '@/utils/tools'
 import { Loading } from 'element-ui'
 import FormApi from '@/apis/formApi'
 import SetupViewPane from './setupPane'
-import tool from '@/utils/tools.js'
+import BaseFormTable from '@/components/BaseFormTable'
+import BaseFormContent from '@/components/BaseFormContent'
+import { getVisibleFieldModels, fixNoPlacementCompatibility } from '@/utils/formUtils'
 export default {
   components: {
-    SetupViewPane
+    SetupViewPane,
+    BaseFormTable,
+    BaseFormContent
   },
   data() {
     return {
@@ -124,6 +154,12 @@ export default {
           ]
         },
         visible: false
+      },
+      /**
+       * 待预览的视图模型
+       */
+      previewFormModel: {
+        visible: false
       }
     }
   },
@@ -158,23 +194,6 @@ export default {
       }
       tool.arraySortAndUnique(this.formExtraViewAttrs.names, true)
     },
-
-    // /**
-    // * 从关联视图清单中移除视图
-    // */
-    // delExtraViewNames(names) {
-    //   if (tool.isBlank(names)) {
-    //     return
-    //   }
-    //   if (!tool.isArray(names)) {
-    //     names = [names]
-    //   }
-    //   for (var i = this.formExtraViewAttrs.names.length - 1; i >= 0; i--) {
-    //     if (tool.inArray(this.formExtraViewAttrs.names[i], names) >= 0) {
-    //       this.formExtraViewAttrs.names.splice(i, 1)
-    //     }
-    //   }
-    // },
 
     /**
      * 从关联视图清单中移除视图
@@ -214,7 +233,7 @@ export default {
      */
     getDetailViewAttributes(origin) {
       this.formApi.loadViewAttributes(origin.classPath).then(customs => {
-        this.formDetailViewAttrs = { data: this.mergeViewAttributes(origin.properties, customs), classPath: origin.classPath }
+        this.formDetailViewAttrs = { data: this.mergeViewAttributes(origin, customs), classPath: origin.classPath }
       })
     },
 
@@ -230,18 +249,18 @@ export default {
       if (tool.isArray(otherQueries)) {
         queries = queries.concat(otherQueries)
       }
-      console.log('获取到的查询定义数据如下：')
-      console.log(queries)
-      console.log('开始加载用户自定义查询视图数据 ...')
+      // console.log('获取到的查询定义数据如下：')
+      // console.log(queries)
+      // console.log('开始加载用户自定义查询视图数据 ...')
       queries.forEach((query, index) => {
-        var formQueryViewAttrsKey = 'formqueries' + tool.lengthPrefixed(index, 2, '0')
+        var formQueryViewAttrsKey = 'formqueries' + tool.leftPad(index, 2, '0')
         formQueryViewAttrs[formQueryViewAttrsKey] = { name: query.name, display: query.display }
         return ((index, query) => {
           this.formApi.loadViewAttributes(query.formClass.classPath).then(customs => {
             ++count
             formQueryViewAttrs[formQueryViewAttrsKey]['formClass'] = {
               classPath: query.formClass.classPath,
-              data: this.mergeViewAttributes(query.formClass.properties, customs)
+              data: this.mergeViewAttributes(query.formClass, customs)
             }
             if (count === queries.length * 2) {
               this.formQueryViewAttrs = formQueryViewAttrs
@@ -251,11 +270,11 @@ export default {
             ++count
             formQueryViewAttrs[formQueryViewAttrsKey]['resultClass'] = {
               classPath: query.resultClass.classPath,
-              data: this.mergeViewAttributes(query.resultClass.properties, customs)
+              data: this.mergeViewAttributes(query.resultClass, customs)
             }
             if (count === queries.length * 2) {
-              console.log('加载用户自定义查询视图数据完成，合并数据如下：')
-              console.log(formQueryViewAttrs)
+              // console.log('加载用户自定义查询视图数据完成，合并数据如下：')
+              // console.log(formQueryViewAttrs)
               this.formQueryViewAttrs = formQueryViewAttrs
             }
           })
@@ -275,22 +294,22 @@ export default {
       if (tool.isArray(otherActions)) {
         actions = actions.concat(otherActions)
       }
-      console.log('获取到的查询定义数据如下：')
-      console.log(actions)
-      console.log('开始加载用户自定义查询视图数据 ...')
+      // console.log('获取到的查询定义数据如下：')
+      // console.log(actions)
+      // console.log('开始加载用户自定义查询视图数据 ...')
       actions.forEach((action, index) => {
-        var formActionViewAttrsKey = 'formactions' + tool.lengthPrefixed(index, 2, '0')
+        var formActionViewAttrsKey = 'formactions' + tool.leftPad(index, 2, '0')
         formActionViewAttrs[formActionViewAttrsKey] = { name: action.name, display: action.display }
         return ((index, action) => {
           this.formApi.loadViewAttributes(action.formClass.classPath).then(customs => {
             ++count
             formActionViewAttrs[formActionViewAttrsKey]['formClass'] = {
               classPath: action.formClass.classPath,
-              data: this.mergeViewAttributes(action.formClass.properties, customs)
+              data: this.mergeViewAttributes(action.formClass, customs)
             }
             if (count === actions.length * 2) {
-              console.log('加载用户自定义查询视图数据完成，合并数据如下：')
-              console.log(formActionViewAttrs)
+              // console.log('加载用户自定义查询视图数据完成，合并数据如下：')
+              // console.log(formActionViewAttrs)
               this.formActionViewAttrs = formActionViewAttrs
             }
           })
@@ -298,11 +317,11 @@ export default {
             ++count
             formActionViewAttrs[formActionViewAttrsKey]['resultClass'] = {
               classPath: action.resultClass.classPath,
-              data: this.mergeViewAttributes(action.resultClass.properties, customs)
+              data: this.mergeViewAttributes(action.resultClass, customs)
             }
             if (count === actions.length * 2) {
-              console.log('加载用户自定义查询视图数据完成，合并数据如下：')
-              console.log(formActionViewAttrs)
+              // console.log('加载用户自定义查询视图数据完成，合并数据如下：')
+              // console.log(formActionViewAttrs)
               this.formActionViewAttrs = formActionViewAttrs
             }
           })
@@ -315,8 +334,8 @@ export default {
      */
     loadExtraViewNames() {
       this.formApi.loadExtraViewNames().then(names => {
-        console.log('获取到的表单关联的视图清单如下：')
-        console.log(names)
+        // console.log('获取到的表单关联的视图清单如下：')
+        // console.log(names)
         this.addExtraViewNames(names)
       })
     },
@@ -329,7 +348,7 @@ export default {
       if (formViewKey && formViewKey.value) {
         formViewKey = formViewKey.value
       }
-      console.log('"' + tool.trim(tool.stringify(formViewKey)) + '"')
+      // console.log('"' + tool.trim(tool.stringify(formViewKey)) + '"')
       if (tool.isBlank(formViewKey)) {
         return
       }
@@ -338,13 +357,13 @@ export default {
         this.formApi.loadViewAttributes(formViewKey).then(customs => {
           this.formExtraViewAttrs['formClass'] = {
             classPath: formViewKey,
-            data: this.mergeViewAttributes(formViewData.properties, customs)
+            data: this.mergeViewAttributes(formViewData, customs)
           }
         }).catch((e) => {
-          this.$message.error('加载表单界面视图自定义数据失败：' + formViewKey)
+          this.$notify.error('加载表单界面视图自定义数据失败：' + formViewKey)
         })
       }).catch((e) => {
-        this.$message.error('加载表单界面视图原始数据失败：' + formViewKey)
+        this.$notify.error('加载表单界面视图原始数据失败：' + formViewKey)
       })
     },
 
@@ -352,18 +371,30 @@ export default {
       if (!origin) {
         return
       }
-      var result = {}
-      for (var key in origin) {
-        result[key] = {
-          title: origin[key].title || '',
-          group: origin[key].group || '',
-          position: origin[key].position || '',
-          description: origin[key].description || '',
-          fieldType: origin[key].fieldType || 'string',
-          type: origin[key].type || 'string',
-          template: origin[key].template || '',
-          classPath: origin[key].items ? (origin[key].items.classPath || '') : (origin[key].classPath || '')
-        }
+      var result = origin.properties ? tool.jsonCopy(origin.properties) : {}
+      result[':form'] = {
+        type: 'form',
+        position: 1,
+        title: origin.title,
+        description: origin.description,
+        classPath: origin.classPath,
+        readonly: true
+      }
+      for (var key in result) {
+        result[key] = Object.assign(result[key], {
+          title: result[key].title || '',
+          position: result[key].position || '',
+          description: result[key].description || '',
+          fieldType: result[key].fieldType || 'string',
+          type: result[key].type || 'string',
+          template: result[key].template || '',
+          pattern: result[key].pattern || '',
+          placement: result[key].placement || '',
+          placerows: result[key].placerows || '',
+          listWidth: result[key].listWidth || '',
+          listPosition: result[key].listPosition || '',
+          classPath: result[key].items ? (result[key].items.classPath || '') : (result[key].classPath || '')
+        })
         /**
          * 所有发现的关联视图，都将被自动添加到可选列表中
          */
@@ -383,16 +414,19 @@ export default {
             }
           }
           if (!innerField) {
-            result[customs[i].field] = { type: 'string', fieldType: '_custom' }
+            result[customs[i].field] = { type: 'string', fieldType: '_custom', readonly: true }
             innerField = result[customs[i].field]
           }
           Object.assign(innerField, {
-            'title': tool.defaultIfEquals(tool.ifBlank(customs[i].title, innerField.title), '<empty>', ''),
-            'group': tool.defaultIfEquals(tool.ifBlank(customs[i].group, innerField.group), '<empty>', ''),
-            'position': tool.defaultIfEquals(tool.ifBlank(customs[i].position, innerField.position), '<empty>', ''),
-            'template': tool.defaultIfEquals(tool.ifBlank(customs[i].template, innerField.template), '<empty>', ''),
-            'placement': tool.defaultIfEquals(tool.ifBlank(customs[i].placement, innerField.placement), '<empty>', ''),
-            'description': tool.defaultIfEquals(tool.ifBlank(customs[i].description, innerField.description), '<empty>', '')
+            'title': tool.ifBlank(customs[i].title, innerField.title || ''),
+            'position': tool.ifBlank(customs[i].position, innerField.position || ''),
+            'template': tool.ifBlank(customs[i].template, innerField.template || ''),
+            'pattern': tool.ifBlank(customs[i].pattern, innerField.pattern || ''),
+            'placerows': tool.ifBlank(customs[i].placerows, innerField.placerows || ''),
+            'placement': tool.ifBlank(customs[i].placement, innerField.placement || ''),
+            'listWidth': tool.ifBlank(customs[i].listWidth, innerField.listWidth || ''),
+            'listPosition': tool.ifBlank(customs[i].listPosition, innerField.listPosition || ''),
+            'description': tool.ifBlank(customs[i].description, innerField.description || '')
           })
         }
       }
@@ -403,37 +437,75 @@ export default {
      * 保存当前的视图界面数据
      */
     saveViewAttributes(formClassViewAttributes) {
-      this.$confirm(`是否确认保存?`, '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        var uploadData = []
-        for (var key in formClassViewAttributes.data) {
-          var attrs = formClassViewAttributes.data[key]
-          uploadData.push({
-            field: key,
-            title: attrs.title,
-            group: attrs.group,
-            position: attrs.position,
-            description: attrs.description,
-            fieldType: attrs.fieldType,
-            template: attrs.template,
-            placement: attrs.placement
+      this.$confirm(`是否确认保存?`, '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+        .then(() => {
+          var uploadData = this.formViewAttributesToData(formClassViewAttributes)
+          var loading = Loading.service({ fullscreen: true, text: '保存中…', background: 'rgba(0, 0, 0, 0.1)' })
+          this.formApi.saveViewAttributes(formClassViewAttributes.classPath, uploadData).then(res => {
+            formClassViewAttributes.data = this.sortFieldByPosition(formClassViewAttributes.data)
+            this.$notify.success(`保存成功`)
+          }).finally(e => {
+            loading.close()
           })
+        })
+    },
+
+    /**
+     * 视图模型转定制数据结构
+     * @param {Object} formClassViewAttributes
+     */
+    formViewAttributesToData(formClassViewAttributes) {
+      var uploadData = []
+      for (var key in formClassViewAttributes.data) {
+        var attrs = formClassViewAttributes.data[key]
+        uploadData.push({
+          field: key,
+          title: attrs.title,
+          position: attrs.position,
+          description: attrs.description,
+          fieldType: attrs.fieldType,
+          template: attrs.template,
+          pattern: attrs.pattern,
+          placement: attrs.placement,
+          placerows: attrs.placerows,
+          listWidth: attrs.listWidth,
+          listPosition: attrs.listPosition
+        })
+      }
+      return uploadData
+    },
+
+    /**
+     * 预览当前的视图界面数据
+     */
+    preViewAttributes(formClassViewAttributes, style, editable, forEvent) {
+      var uploadData = this.formViewAttributesToData(formClassViewAttributes)
+      var loading = Loading.service({ fullscreen: true, text: '请求中…', background: 'rgba(0, 0, 0, 0.1)' })
+      this.formApi.preViewAttributes(formClassViewAttributes.classPath, uploadData).then(formModel => {
+        this.previewFormModel.style = style
+        this.previewFormModel.visible = true
+        this.previewFormModel.editable = !!editable
+        this.previewFormModel.windowWidth = formModel.placement > 1 ? (formModel.placement / 12 * 100) : 0
+        this.previewFormModel.model = (forEvent ? fixNoPlacementCompatibility(formModel) : formModel)
+        this.previewFormModel.data = [{}]
+        var fields = getVisibleFieldModels(formModel)
+        for (const field of fields) {
+          if (field.comType === 'innerForm') {
+            this.previewFormModel.data[0][field.key] = [{ a: 'b' }]
+          }
         }
-        var loading = Loading.service({
-          fullscreen: true,
-          text: '请求中…',
-          background: 'rgba(0, 0, 0, 0.1)'
-        })
-        this.formApi.saveViewAttributes(formClassViewAttributes.classPath, uploadData).then(res => {
-          formClassViewAttributes.data = this.sortFieldByPosition(formClassViewAttributes.data)
-          this.$message.success(`保存成功`)
-        }).finally(e => {
-          loading.close()
-        })
+      }).finally(e => {
+        loading.close()
       })
+    },
+
+    preViewAttributesForEditor(formClassViewAttributes) {
+      this.preViewAttributes(formClassViewAttributes, 'form', true, false)
+    },
+
+    /* 为兼容 placement 出现之前的默认事件表单样式，为设置的统一使用整行 */
+    preViewAttributesForEventEditor(formClassViewAttributes) {
+      this.preViewAttributes(formClassViewAttributes, 'form', true, true)
     },
 
     /**
@@ -479,8 +551,8 @@ export default {
         this.formViewCreation.visible = false
         return
       }
-      console.log('当前添加的视图信息如下：')
-      console.log(this.formViewCreation)
+      // console.log('当前添加的视图信息如下：')
+      // console.log(this.formViewCreation)
       this.$refs['viewCreationForm'].validate(valid => {
         if (!valid) {
           return

@@ -1,66 +1,101 @@
 <template>
-  <div class="form-create">
-    <el-page-header class="common-page-header" :content="action.display" @back="$router.go(-1)" />
-    <BaseFormGenerator v-model="filterParams" type="submit" :form-class="action.formClass" @input="handleSubmit" @cancle="$router.go(-1)" />
+  <div class="form-instance-creator">
+    <el-page-header
+      title="关闭"
+      class="common-page-header"
+      :content="formTitle"
+      @back="$router.go(-1)"
+    />
+    <BaseFormEditor
+      v-if="actionModel"
+      :form-name="formName"
+      :form-data="actionData"
+      :form-model="actionModel.formClass"
+      @input="submitFormAction"
+      @cancel="closeActionForm"
+    />
   </div>
 </template>
 <script>
+import tool from '@/utils/tools'
 import FormApi from '@/apis/formApi'
-import BaseFormGenerator from '@/components/BaseFormGenerator'
+import { fixNoPlacementCompatibility } from '@/utils/formUtils'
+import BaseFormEditor from '@/components/BaseFormEditor'
 export default {
   components: {
-    BaseFormGenerator
+    BaseFormEditor
   },
   data() {
     return {
-      action: {
-        formClass: {}
-      },
-      filterParams: {}
+      formName: '',
+      formAction: '',
+      formApi: null,
+      formTitle: '创建',
+      actionModel: null,
+      actionData: null
     }
   },
-  created() {
-    // console.log(this.$route.params)
-    this.formApi = new FormApi(this.$route.params['form_name'])
-    const loading = this.$loading({
-      lock: true,
-      text: 'Loading'
-    })
-    this.formApi.loadAction(this.$route.params['form_action']).then(action => {
-      this.action = action
-    }).finally(res => {
+  mounted() {
+    this.formName = this.$route.params.form_name
+    this.formAction = this.$route.params.form_action
+    this.formApi = new FormApi(this.formName)
+    var loading = this.$loading({ lock: true, text: 'Loading' })
+    this.formApi.loadDefinition().then((data) => {
+      var actionIndex = tool.inArray(this.formAction, data.quickActions, function(a, v) {
+        return a.name === v
+      })
+      if (actionIndex < 0) {
+        this.$message.error('当前操作不存在或未经授权')
+        return
+      }
+      var actionModel = data.quickActions[actionIndex]
+      /* 为兼容 placement 出现之前的默认事件表单样式，为设置的统一使用整行 */
+      fixNoPlacementCompatibility(actionModel.formClass)
+      this.formTitle = `${data.title} / ${actionModel.display}`
+      tool.title(this.formTitle, true)
+      return Promise.resolve(actionModel)
+    }).then((actionModel) => {
+      if (!actionModel.prepareRequired) {
+        this.actionModel = actionModel
+        loading.close()
+        return
+      }
+      this.formApi.loadActionPrepareData(-1, actionModel.name, this.$route.query)
+        .then(data => {
+          this.actionData = data || {}
+          this.actionModel = actionModel
+        })
+        .finally(res => {
+          loading.close()
+        })
+    }).catch((e) => {
       loading.close()
+      return Promise.reject(e)
     })
   },
   methods: {
-    handleSubmit(e) {
-      var params = e
-      const loading = this.$loading({
+    submitFormAction(params) {
+      if (!params) {
+        return
+      }
+      var loading = this.$loading({
         lock: true,
         text: 'Loading'
       })
-      this.formApi.postTrigger(this.$route.params.form_action, { form: params, message: '' }).then(res => {
-        this.$message.success('表单提交成功')
-        this.$router.go(-1)
+      this.formApi.triggerAction(this.formAction, params).then(res => {
+        this.$message.success('提交成功')
+        this.closeActionForm()
       }).finally(res => {
         loading.close()
       })
+    },
+    closeActionForm() {
+      this.$router.go(-1)
     }
   }
 }
 </script>
 <style lang='scss'>
-.form-create {
-    .form-generator {
-    align-items: center;
-
-    .el-select,
-    .el-input,
-    .el-textarea,
-    .el-range-editor--mini.el-input__inner {
-      width: 350px;
-    }
-}
-}
-
+  .form-instance-creator {
+  }
 </style>

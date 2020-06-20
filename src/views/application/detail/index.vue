@@ -5,7 +5,7 @@
   </div>
 </template>
 <script>
-import Files from './ApplicationDetailFiles'
+import Files from './ApplicationCategoryPanel'
 import Panel from './ApplicationDetailPanel'
 import { getAppSummary } from '@/apis/application'
 export default {

@@ -6,6 +6,18 @@ const formRouter = {
   component: Layout,
   children: [
     {
+      path: 'list/:form_name/:form_id/flowchart',
+      name: 'FlowChartForCurrentForm',
+      meta: { title: '指定表单流程图' },
+      component: () => import('@/flowChart/pages/view.vue')
+    },
+    {
+      path: 'list/:form_name/flowchart',
+      name: 'FlowChart',
+      meta: { title: '通用表单流程图' },
+      component: () => import('@/flowChart/pages/view.vue')
+    },
+    {
       path: 'list/:form_name',
       name: 'List',
       meta: { title: '表单列表' },

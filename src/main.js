@@ -2,10 +2,13 @@ import Vue from 'vue'
 import App from './App.vue'
 import router from './router'
 import store from './store/index'
-import tool from './utils/tools.js'
+import tool from './utils/tools'
+import enums from './utils/enums'
 import ElementUI from 'element-ui'
+import { Base64 } from 'js-base64'
 import 'element-ui/lib/theme-chalk/index.css'
 
+Vue.prototype.$enums = enums
 Vue.config.productionTip = false
 
 /**
@@ -14,7 +17,7 @@ Vue.config.productionTip = false
      * @return {string} 编码后的arg参数
      */
 window.$encodeResultPageArg = function(eventResult) {
-  return btoa(JSON.stringify(eventResult))
+  return Base64.encode(JSON.stringify(eventResult))
 }
 
 Vue.use(ElementUI)

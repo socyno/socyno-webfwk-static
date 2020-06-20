@@ -3,10 +3,10 @@
     <div class="tabbar">
       <el-radio-group v-model="selectedTab" size="small" @change="handleTabSwitch">
         <el-radio-button label="focus">
-          关注的应用
+          关注应用
         </el-radio-button>
         <el-radio-button label="all">
-          所有应用
+          我的应用
         </el-radio-button>
       </el-radio-group>
       <el-form size="small" :inline="true" :model="form">
@@ -35,12 +35,12 @@
         </el-form-item>
         <el-form-item>
           <el-select v-model="form.type" placeholder="应用类型" clearable>
-            <el-option v-for="(key,value) in applicationType" :key="key" :label="key" :value="value" />
+            <el-option v-for="(key,value) in $enums.get('ApplicationType')" :key="key" :label="key" :value="value" />
           </el-select>
         </el-form-item>
         <el-form-item>
           <el-select v-model="form.codeLevel" placeholder="代码等级" clearable>
-            <el-option v-for="(key,value) in applicationCodeLevel" :key="key" :label="key" :value="value" />
+            <el-option v-for="(key,value) in $enums.get('ApplicationCodeLevel')" :key="key" :label="key" :value="value" />
           </el-select>
         </el-form-item>
 
@@ -55,7 +55,7 @@
       </div> -->
       <div class="l name">
         <div class="pname">
-          <span v-if="item.type" class="atype">{{ applicationType[item.type] }}</span>
+          <span v-if="item.type" class="atype">{{ $enums.getDisplayOrValue('ApplicationType', item.type) }}</span>
           <span class="link">
             <router-link :to="{path:'app/' + item.id, params: {app_id: item.id}}">
               {{ item.subsystemName }} / <span class="Summary">{{ item.name }}</span>
@@ -71,9 +71,9 @@
           <el-tooltip effect="dark" :content="'代码等级: ' + getLevel(item.codeLevel).l" placement="left-start">
             <el-button type="text" :class="'iconfont iconpriority app-row-icon ' + getLevel(item.codeLevel).bg" />
           </el-tooltip>
-          <el-tooltip effect="dark" placement="left-start">
+          <el-tooltip v-if="item.type == 'application'" effect="dark" placement="left-start">
             <div slot="content">
-              <div>部署环境统计: </div>
+              <div>部署节点信息: </div>
               <!-- eslint-disable -->
               <div v-html="getEnvCount(item.deployNamespaceSummaries)" />
             </div>
@@ -89,7 +89,7 @@
           <FavoriteButton :is-fav="item.bookmarked" :app-id="item.id" icononly style="padding-right:15px;" />
         </div>
         <div class="state">
-          {{ applicationState[item.state] }}
+          {{ $enums.getDisplayOrValue('ApplicationState', item.state) }}
         </div>
       </div>
     </div>
@@ -126,24 +126,7 @@ export default {
         limit: 10,
         page: 1
       },
-      total: 0,
-      applicationType: {
-        application: '服务端',
-        client: '客户端',
-        library: '组件库',
-        static: '静态资源'
-      },
-      applicationState: {
-        created: '新创建',
-        online: '服务中',
-        offlining: '下线中',
-        offlined: '已下线'
-      },
-      applicationCodeLevel: {
-        '30:blue': '蓝',
-        '20:yellow': '黄',
-        '10:red': '红'
-      }
+      total: 0
     }
   },
   mounted() {
@@ -196,12 +179,18 @@ export default {
     changePage() {
       this.loadData()
     },
-    getEnvCount(env) {
+    getEnvCount(envs) {
+      if (!envs || envs.length <= 0) {
+        return '无'
+      }
       var str = ''
-      for (const key in env) {
-        if (env.hasOwnProperty(key)) {
-          const element = env[key]
-          str += '<br>' + element.env + ': ' + ' 机组数量: ' + element.namespaceNum + ' 副本数量: ' + element.replicas
+      for (const key in envs) {
+        if (envs.hasOwnProperty(key)) {
+          const element = envs[key]
+          str += '<br>' + element.envDisplay +
+                 ': 部署 ' + element.replicas +
+                 ' 个节点，涉及 ' + element.clusterTotal +
+                 ' 个集群、' + element.namespaceTotal + ' 个机组'
         }
       }
       return str
