@@ -66,32 +66,26 @@ export default {
   },
   watch: {
     selected: {
-      immediate: true,
+      // immediate: true,
       handler(selected) {
-        var that = this
-        if (!that.queryModels) {
+        if (!this.queryModels) {
           return
         }
         // console.log('当前选择查询为 ：', selected)
-        that.queryModel = that.queryModels[selected]
-        // console.log('当前选择查询为 ：', that.queryModel)
-        that.onSelectedChanged(that.queryModel)
+        this.queryModel = this.queryModels[selected]
+        // console.log('当前选择查询为 ：', this.queryModel)
+        this.onSelectedChanged(this.queryModel)
       }
     },
     queryModels: {
       immediate: true,
       handler(queries) {
-        var that = this
-        // setTimeout(function() {
-        // console.log('可用查询清单 ：', that.selected, ' - ', queries)
-        if (tool.isUndefOrNull(that.selected) || that.selected < 0 || that.selected >= queries.length) {
-          that.selected = 0
+        if (tool.isUndefOrNull(this.selected) || this.selected < 0 || this.selected >= queries.length) {
+          this.selected = 0
           return
         }
-        that.queryModel = queries[that.selected]
-        that.onSelectedChanged(that.queryModel)
-        // console.log('设置当前查询为：', that.queryModel)
-        // }, 100)
+        this.queryModel = queries[this.selected]
+        this.onSelectedChanged(this.queryModel)
       }
     }
   },

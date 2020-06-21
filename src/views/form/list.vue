@@ -15,7 +15,7 @@
     />
 
     <BaseFormTable
-      v-if="currentQuery && currentQuery.resultClass && currentTableData"
+      v-show="currentQuery && currentQuery.resultClass && currentTableData"
       ref="formTable"
       :form-name="formName"
       :data="currentTableData"
@@ -216,7 +216,7 @@ export default {
      * 查询触发的回调
      */
     onQueryApply(params) {
-      // console.log('查询的参数数据如下：', params)
+      console.log('查询的参数数据如下：', params)
       this.filterParams = params
       this.initListData()
     },
@@ -227,6 +227,7 @@ export default {
       if (!changedQuery) {
         return
       }
+      console.log('切换查询如下：', changedQuery)
       this.filterParams = {}
       this.currentQuery = changedQuery
       this.currentFieldModels = getVisibleFieldModels(changedQuery.resultClass)
@@ -448,7 +449,8 @@ export default {
     .row-form-create-content {
       position: absolute !important;
       top: 0px !important;
-      left: 0px !important;;
+      left: 0px !important;
+      right: 0px !important;
       bottom: 0px !important;
       overflow-y: auto;
     }

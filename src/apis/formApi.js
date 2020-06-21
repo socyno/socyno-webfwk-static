@@ -334,6 +334,9 @@ class FormApi {
     if (fromIndex) {
       params['fromCommentId'] = fromIndex
     }
+    if (!tool.looksLikeInteger(formId)) {
+      throw new Error('IllegalArguments: Invalid form id provided ' + formId)
+    }
     return request({
       url: `/form/comments/${this.formName}/${formId}`,
       method: 'get',
@@ -352,6 +355,9 @@ class FormApi {
     if (fromIndex) {
       params['fromLogIndex'] = fromIndex
     }
+    if (!tool.looksLikeInteger(formId)) {
+      throw new Error('IllegalArguments: the form id is missing')
+    }
     return request({
       url: `/form/logs/${this.formName}/${formId}`,
       method: 'get',
@@ -366,6 +372,9 @@ class FormApi {
    * @param {Integer} detailId
    */
   loadFormActionLogDetail(formId, detailId) {
+    if (tool.isBlank(formId) || tool.isBlank(detailId)) {
+      throw new Error('IllegalArguments: the form id or log detail id is missing')
+    }
     return request({
       url: `/form/logs/${this.formName}/${formId}/${detailId}/detail`,
       method: 'get'

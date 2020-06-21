@@ -29,16 +29,23 @@
         <el-table-column
           v-else
           :key="idx"
+          :show-overflow-tooltip="showOverflowTooltip"
           :width="field.listWidth ? field.listWidth : 0"
           :formatter="columnFormatter"
           :label="field.title"
           :prop="field.key"
         />
       </slot>
-      <el-table-column v-if="rowActions && rowActions.length > 0" fixed="right" label="操作">
+      <el-table-column v-if="rowActions && rowActions.length > 0" class="basic-form-list-actpane" fixed="right" label="操作">
         <template slot-scope="scope">
           <slot v-for="(action) in rowActions">
-            <el-button v-show="checkActionVisible(action, scope.row, scope.$index)" :type="action.type || 'text'" @click="onRowActionClick(action, scope.row, scope.$index)">
+            <el-button
+              v-show="checkActionVisible(action, scope.row, scope.$index)"
+              :type="action.type || 'text'"
+              :size="action.size || 'small'"
+              :class="action.class || 'basic-form-list-action'"
+              @click="onRowActionClick(action, scope.row, scope.$index)"
+            >
               {{ action.display || action.text || action.name || action.key }}
             </el-button>
           </slot>
@@ -107,6 +114,10 @@ export default {
     formName: {
       type: String,
       default: null
+    },
+    showOverflowTooltip: {
+      type: Boolean,
+      default: true
     }
   },
   data() {
@@ -132,7 +143,9 @@ export default {
     }
   },
   mounted() {
-    this.setPaging(this.paging)
+    if (this.paging) {
+      this.setPaging(this.paging)
+    }
   },
   methods: {
     /**
@@ -216,6 +229,7 @@ export default {
      * 当分页信息发生变化时触发器
      */
     setPaging(paging) {
+      console.log('设置分页信息 => ', paging)
       if (!paging || !tool.isPlainObject(paging)) {
         this.pageInfo = null
         return
@@ -254,3 +268,15 @@ export default {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+  .basic-form-list {
+    .el-table__row {
+      .el-button {
+        padding: 2px !important;
+        margin: 2px !important;
+      }
+    }
+  }
+
+</style>

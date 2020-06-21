@@ -266,7 +266,8 @@ export default {
     .form-action-content {
       position: absolute !important;
       top: 0px !important;
-      left: 0px !important;;
+      left: 0px !important;
+      right: 0px !important;
       bottom: 0px !important;
       overflow-y: auto;
     }
