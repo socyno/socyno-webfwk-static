@@ -47,7 +47,7 @@ export default {
   },
   methods: {
     onActionClick(action) {
-      this.$emit('input', action.name)
+      this.$emit('input', action.name, action)
     }
   }
 }

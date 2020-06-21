@@ -7,7 +7,6 @@ $bgcolor: #F0F2F5;
 $greytext: #a1a1a1;
 $maintext:#303133;
 
-
 .common-shadow {
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
@@ -49,11 +48,4 @@ $maintext:#303133;
   color:#2e2e2e;
   font-size: 14px;
   font-family: "Menlo", "DejaVu Sans Mono", "Liberation Mono", "Consolas", "Ubuntu Mono", "Courier New", "andale mono", "lucida console", monospace;
-}
-
-@media screen and (min-width: 1377px) {
-  .fit-container{
-    width: 1300px;
-    margin: 0 auto;
-  }
 }

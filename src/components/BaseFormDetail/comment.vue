@@ -1,5 +1,6 @@
 <template>
   <div v-show="formLogsData" v-loading="loading" class="form-comment-lists">
+    <hr style="background-color: #EEE; border: 0; height: 1px;">
     <el-table :data="formLogsData" border>
       <el-table-column label="编号" prop="id" width="100" />
       <el-table-column label="创建人" prop="operateTime" width="200" />

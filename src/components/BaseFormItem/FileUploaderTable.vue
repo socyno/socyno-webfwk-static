@@ -55,7 +55,7 @@ export default {
     formName: {
       type: String,
       default: function() {
-        return this.$route.params.form_name || this.$route.query.formName
+        return this.$route.params.formName || this.$route.query.formName
       }
     }
   },

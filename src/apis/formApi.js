@@ -288,11 +288,11 @@ class FormApi {
    * 执行表单创建事件
    * @param {string} formName
    */
-  loadFlowChart(formId, keepUnChangeState) {
+  loadFlowChart(formId, type) {
     return request({
-      url: `/form/form/${this.formName}/flowchart/definition`,
+      url: `/form/flowchart/${this.formName}/data`,
       method: 'get',
-      params: { formId: formId, 'keepUnChangeState': keepUnChangeState }
+      params: { formId: formId, 'unchanged': type === 'unchanged' }
     })
   }
 

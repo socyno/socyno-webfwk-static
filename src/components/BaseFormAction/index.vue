@@ -41,10 +41,22 @@ export default {
   },
   methods: {
     /**
-     * 触发指定的表单事件
-     * @param {String} action
+     * 触发指定的表单创建事件
+     * @param {String} formName
+     * @param {Object} formAction
      */
-    trigger(formName, formAction, formId, formData) {
+    create(formName, formAction, actionParams) {
+      this.trigger(formName, formAction, -1, { id: -1, revision: -1 }, actionParams)
+    },
+
+    /**
+     * 触发指定的表单事件
+     * @param {String} formName
+     * @param {Object} formAction
+     * @param {Number|String} formId
+     * @param {Object} formData
+     */
+    trigger(formName, formAction, formId, formData, actionParams) {
       this.editable = true
       this.formId = formId
       this.formName = formName
@@ -82,7 +94,7 @@ export default {
       fixNoPlacementCompatibility(this.formAction.formClass)
       if (this.formAction.prepareRequired) {
         var loading = Loading.service({ fullscreen: true })
-        this.formApi.loadActionPrepareData(this.formId, this.formAction.name).then(data => {
+        this.formApi.loadActionPrepareData(this.formId, this.formAction.name, actionParams).then(data => {
           Object.assign(this.formData, data || {})
           this.$emit('prepare', data, this.formName, this.formId, this.formAction, this.formData)
         }).finally(res => {
@@ -120,17 +132,22 @@ export default {
      */
     _submitFormAction(params) {
       var message = params._message
-      params.id = this.formData.id
+      params.id = this.formId
       params.revision = this.formData.revision
       var loading = Loading.service({ fullscreen: true })
       this.formApi.triggerAction(this.formAction.name, { form: params, message: message }).then((data) => {
-        var eventResultType = ''
-        if (data) {
-          eventResultType = tool.toLower(data.eventResultViewType)
-        }
+        var eventResultType = data ? tool.toLower(data.eventResultViewType) : ''
         this.$nextTick(function() {
           this.$notify.success(eventResultType === 'messageview' ? data.message : '操作成功')
-          this.$emit('commit', data, this.formName, this.formId, this.formAction, this.formData)
+          if (tool.toUpper(this.formAction.eventFormType) === 'DELETE') {
+            this.$emit('delete', data, this.formName, this.formId, this.formAction)
+          } else if (tool.toUpper(this.formAction.eventFormType) === 'CREATE') {
+            this.formId = tool.isNumber(data) ? data : data.id
+            this.$emit('create', data, this.formName, this.formId, this.formAction)
+          } else {
+            this.$emit('change', data, this.formName, this.formId, this.formAction)
+          }
+          console.log('事件执行完成：', this.formName, '/', this.formId, ':', this.formAction)
         })
         if (!data || tool.isBlank(eventResultType) || eventResultType === 'messageview') {
           return
@@ -146,7 +163,7 @@ export default {
           path: '/form/result/' + tool.encodeURI(data.eventResultViewType),
           query: { arg: window.$encodeResultPageArg(data) }
         })
-        window.open(resultPage.href, '_blank')
+        tool.open(resultPage.href)
       }).finally(res => {
         loading.close()
       })

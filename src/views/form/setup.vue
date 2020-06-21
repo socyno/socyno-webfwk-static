@@ -110,7 +110,7 @@ export default {
   },
   data() {
     return {
-      formName: this.$route.params.form_name,
+      formName: this.$route.params.formName,
       formTitle: '',
       /**
        * 详情视图界面数据

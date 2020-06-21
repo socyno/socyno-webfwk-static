@@ -153,6 +153,19 @@ const tool = {
     return rmstr === str ? null : rmstr
   },
 
+  /**
+   * 检查是否以指定字串结尾
+   */
+  endsWith(str, endsWith) {
+    if ((endsWith = this.stringify(endsWith)).length <= 0) {
+      return false
+    }
+    if ((str = this.stringify(str)).length <= 0 || endsWith.length > str.length) {
+      return false
+    }
+    return str.substr(0 - endsWith.length, endsWith.length) === endsWith
+  },
+
   /* 检测是否为空字符串(undefined/null/empty) */
   isEmpty(v) {
     return this.stringify(v).length === 0
@@ -459,6 +472,7 @@ const tool = {
     }
     return a + b + c
   },
+
   /**
    * 产生唯一串
    */
@@ -473,6 +487,7 @@ const tool = {
     s[8] = s[13] = s[18] = s[23] = '-'
     return s.join('')
   },
+
   /**
    * Set url's parameter.
    * If no url provided, location.href will be used.
@@ -516,10 +531,29 @@ const tool = {
   },
 
   /**
+   * 设置URL参数
+   * @param {String} url
+   * @param {Object} params
+   */
+  setUrlParams(url, params) {
+    url = this.trim(url)
+    if (!this.isPlainObject(params)) {
+      return url
+    }
+    if (url.length <= 0) {
+      url = '?'
+    }
+    for (var key in params) {
+      url = this.setUrlParam(key, params[key], url)
+    }
+    return url
+  },
+
+  /**
    * 打开新的窗口
    * @param {String} linkUrl
    */
-  openBlankWindow(linkUrl) {
+  open(linkUrl) {
     var link = document.createElement('a')
     link.target = '_blank'
     document.body.appendChild(link)

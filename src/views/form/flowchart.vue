@@ -1,17 +1,14 @@
 <template>
   <div>
-    <div class="bottom">
-      <el-button type="primary" style="width: 250px;height: 80px" size="medium" @click="doUnChangedStateIsShow">
-        {{ buttonVal }}
-      </el-button>
-    </div>
-    <div style="width: 100%; display: flex; justify-content: space-between;">
-      <div id="myFlowChart" class="myFlowChart" :style=" {height: scrollerHeight}" />
-    </div>
+    <el-button type="primary" style="position: absolute; top: 10px; left: 10px; z-index: 999; width: 250px; height: 80px" @click="toggleFlowChartType">
+      {{ type === 'unchanged' ? '隐藏无状态扭转的事件' : '显示所有事件' }}
+    </el-button>
+    <div id="form-flow-chart-canvas" />
   </div>
 </template>
 <script>
 import go from 'gojs'
+import tool from '@/utils/tools'
 import FormApi from '@/apis/formApi'
 // eslint-disable-next-line no-unused-vars
 const MAKE = go.GraphObject.make
@@ -19,63 +16,36 @@ export default {
   data() {
     return {
       myDiagram: null,
-      isShow: typeof (this.$route.query.isShow) === 'undefined' ? 'No' : this.$route.query.isShow,
-      keepUnChangeState: typeof (this.$route.query.isShow) === 'undefined' ? 'No' : this.$route.query.isShow,
-      buttonVal: (this.$route.query.isShow === 'Yes') ? '隐藏非状态流转的操作' : '显示非状态流转的操作',
-      formName: this.$route.params.form_name,
-      formId: this.$route.params.form_id
+      formId: this.$route.query.formId,
+      formName: this.$route.params.formName,
+      type: tool.toLower(this.$route.query.type) === 'unchanged' ? 'unchanged' : 'changed'
     }
   },
-  computed: {
-    scrollerHeight: function() {
-      return (window.innerHeight - 46 - 50) + 'px'
-    }
-  },
-
   mounted() {
-    this.innitFlowChart()
+    this.initializeFlowChart()
   },
   methods: {
-
-    reloadPage(params) {
+    toggleFlowChartType() {
       history.replaceState(
         {},
         null,
         '#' + this.$route.path +
-        '?' +
-        Object.keys(params)
-          .map(key => {
-            return (
-              encodeURIComponent(key) + '=' + encodeURIComponent(params[key])
-            )
-          })
-          .join('&')
+        tool.setUrlParams('?', {
+          formId: tool.stringify(this.formId),
+          type: this.type === 'unchanged' ? 'changed' : 'unchanged'
+        })
       )
-      window.location.reload()
+      location.reload()
     },
 
-    doUnChangedStateIsShow() {
-      if (this.isShow === 'Yes') {
-        this.keepUnChangeState = 'No'
-      } else {
-        this.keepUnChangeState = 'Yes'
-      }
-      const params = {
-        form_name: this.formName,
-        form_id: this.form_id,
-        isShow: this.keepUnChangeState
-      }
-      this.reloadPage(params)
-    },
-
-    innitFlowChart() {
+    initializeFlowChart() {
       const yellowGrad = MAKE(go.Brush, 'Linear', { 0: 'rgb(254, 201, 0)', 1: 'rgb(254, 162, 0)' })
       const blueGrad = MAKE(go.Brush, 'Linear', { 0: '#b0e0e6', 1: '#87CEEB' })
       const greenGrad = MAKE(go.Brush, 'Linear', { 0: '#4ACA6D', 1: '#4ACA6D' })
       const bigFont = 'bold 13pt Helvetica, Arial, sans-serif'
 
       this.myDiagram =
-        MAKE(go.Diagram, 'myFlowChart',
+        MAKE(go.Diagram, 'form-flow-chart-canvas',
           {
             // have mouse wheel events zoom in and out instead of scroll up and down
             'toolManager.mouseWheelBehavior': go.ToolManager.WheelZoom,
@@ -173,36 +143,32 @@ export default {
         ))
 
       const myModel = MAKE(go.GraphLinksModel)
-      const api = new FormApi(this.formName)
-      api.loadFlowChart(this.formId, this.keepUnChangeState).then(res => {
+      new FormApi(this.formName).loadFlowChart(this.formId, this.type).then(res => {
         myModel.nodeDataArray = res.data.nodeData
         myModel.linkDataArray = res.data.linkData
       }).catch(res => {
         this.$notify.error('加载数据异常')
       })
-
       this.myDiagram.model = myModel
     },
 
     textStyle() {
-      const bigFont = 'bold 11pt Helvetica, Arial, sans-serif'
       return {
         margin: 6,
         wrap: go.TextBlock.WrapFit,
         textAlign: 'center',
         editable: true,
-        font: bigFont
+        font: 'bold 11pt Helvetica, Arial, sans-serif'
       }
     },
 
     stateStyle() {
-      const bigFont = 'bold 11pt Helvetica, Arial, sans-serif'
       return {
         margin: 25,
         wrap: go.TextBlock.WrapFit,
         textAlign: 'center',
         editable: true,
-        font: bigFont
+        font: 'bold 11pt Helvetica, Arial, sans-serif'
       }
     },
 
@@ -219,14 +185,12 @@ export default {
 }
 </script>
 <style>
-  .bottom {
-    z-index:999;
-    position:absolute;
-    top: 12px;
-    left: 12px;
-  }
-  .myFlowChart {
-    flex-grow: 1;
-    border: solid 1px black;
+  #form-flow-chart-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 0;
   }
 </style>

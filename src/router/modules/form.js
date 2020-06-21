@@ -6,19 +6,13 @@ const formRouter = {
   component: Layout,
   children: [
     {
-      path: 'list/:form_name/:form_id/flowchart',
-      name: 'FlowChartForCurrentForm',
-      meta: { title: '指定表单流程图' },
-      component: () => import('@/flowChart/pages/view.vue')
-    },
-    {
-      path: 'list/:form_name/flowchart',
+      path: 'flowchart/:formName',
       name: 'FlowChart',
       meta: { title: '通用表单流程图' },
-      component: () => import('@/flowChart/pages/view.vue')
+      component: () => import('@/views/form/flowchart.vue')
     },
     {
-      path: 'list/:form_name',
+      path: 'list/:formName',
       name: 'List',
       meta: { title: '表单列表' },
       component: () => import('@/views/form/list.vue')
@@ -30,16 +24,10 @@ const formRouter = {
       component: () => import('@/views/form/detail.vue')
     },
     {
-      path: 'create/:form_name/:form_action',
+      path: 'create/:formName/:formAction',
       name: 'Create',
       meta: { title: '表单创建' },
       component: () => import('@/views/form/create.vue')
-    },
-    {
-      path: 'logs/:form_id/:form_name',
-      name: 'Logs',
-      meta: { title: '日志' },
-      component: () => import('@/views/form/log.vue')
     },
     {
       path: 'setup/list',
@@ -48,13 +36,13 @@ const formRouter = {
       component: () => import('@/views/form/setupList.vue')
     },
     {
-      path: 'setup/:form_name',
+      path: 'setup/:formName',
       name: 'Setup',
       meta: { title: '表单设置' },
       component: () => import('@/views/form/setup.vue')
     },
     {
-      path: 'result/:result_type',
+      path: 'result/:resultType',
       name: 'Result',
       meta: { title: '操作结果' },
       component: () => import('@/views/form/result.vue')

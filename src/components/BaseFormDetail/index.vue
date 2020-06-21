@@ -14,7 +14,6 @@
         :form-model="formModel"
         :default-data="formData"
       />
-      <hr>
       <Comments :form-name="formName" :form-id="formId" />
     </div>
     <div v-if="formActions" class="form-detail-btnpane">
@@ -40,6 +39,7 @@
       direction="ltr"
       :append-to-body="true"
       :modal-append-to-body="true"
+      @open="onActionDrawerOpen"
     >
       <div v-if="actionDrawer.showChangeLogs">
         <Logs :form-name="formName" :form-id="formId" @back="onActionFormCancel" />
@@ -47,13 +47,11 @@
       <BaseFormAction
         v-else
         ref="actionForm"
-        :form-name="formName"
-        :form-id="actionDrawer.formId"
-        :form-data="actionDrawer.formData"
-        :form-action="actionDrawer.formAction"
+        class="form-action-content"
         @cancel="onActionFormCancel"
         @prepare="onActionFormPrepare"
-        @commit="onActionFormCommit"
+        @delete="onFormDelete"
+        @change="onFormCommit"
       />
     </el-drawer>
   </div>
@@ -82,6 +80,10 @@ export default {
     formName: {
       type: [String],
       required: true
+    },
+    formTop: {
+      type: [Number],
+      default: 0
     }
   },
   data() {
@@ -162,19 +164,20 @@ export default {
     },
 
     /**
-     * 表单操作的完成回调
+     * 表单删除操作的回调
      */
-    onActionFormCommit(resData, formName, formId, formAction, formData) {
-      /* 首先，关闭当前事件表单 */
+    onFormDelete(resData, formName, formId, formAction) {
       this.actionDrawer.visible = false
-      /* 当事件为删除时， 交由子组件自行处理 */
-      if (tool.toUpper(formAction.eventType) === 'DELETE') {
-        this.$emit('delete', this.formName, this.formId, this.formData)
-        return
-      }
-      /* 否则，重新加载详情数据及事件 */
+      this.$emit('delete', resData, formName, formId, formAction)
+    },
+
+    /**
+     * 表单更新操作的回调
+     */
+    onFormCommit(resData, formName, formId, formAction) {
+      this.actionDrawer.visible = false
       this.load()
-      this.$emit('change', this.formName, this.formId, this.formData)
+      this.$emit('change', formName, formId, formAction)
     },
 
     /**
@@ -208,34 +211,45 @@ export default {
     showChangeLogs() {
       this.actionDrawer.visible = true
       this.actionDrawer.showChangeLogs = true
+    },
+
+    /**
+     * 强制操作界面的顶部位置
+     */
+    onActionDrawerOpen() {
+      this.$nextTick(function() {
+        document.getElementsByClassName('form-action-drawer')[0].style.top = this.formTop + 'px'
+      })
     }
   }
 }
 </script>
 <style lang="scss">
 .form-detail-wrapper {
+  position:absolute !important;
+  top: 0px !important;
+  left: 0px !important;
+  bottom: 0px !important;
   display: block !important;
+  background-color: #FFF !important;
+  opacity: initial !important;
   width: 100% !important;
   .form-detail-content {
-    background-color: #FFF;
-    position:absolute !important;
+    position: absolute !important;
     top: 0px !important;
-    left: 0px !important;
+    left: 0px !important;;
     bottom: 0px !important;
     overflow-y: auto;
-    // display: inline-block !important;
     width: calc(100% - 210px) !important;
   }
   .form-detail-btnpane {
-    padding-top: 40px;
+    padding-top: 20px;
     position:absolute !important;
     top: 0px !important;
     right: 0px !important;;
     bottom: 0px !important;
-    display: inline-block !important;
     width: 200px !important;
-    border-left:2px #005599 solid;
-    background-color: #FFF;
+    border-left:2px #EEE solid;
   }
   .form-detail-btnpane .el-button {
      display: block;
@@ -249,6 +263,13 @@ export default {
     width: calc(100% - 200px) !important;
   .form-action-wrapper {
      width: 99% !important;
+    .form-action-content {
+      position: absolute !important;
+      top: 0px !important;
+      left: 0px !important;;
+      bottom: 0px !important;
+      overflow-y: auto;
+    }
   }
 }
 </style>

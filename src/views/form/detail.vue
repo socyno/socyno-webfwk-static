@@ -1,20 +1,12 @@
 <template>
-  <el-drawer
-    :visible.sync="visible"
-    class="form-single-drawer"
-    custom-class="form-single-wrapper"
-    :with-header="false"
-    :modal="false"
-    :append-to-body="true"
-  >
-    <BaseFormDetail
-      :form-id="formId"
-      :form-name="formName"
-      @back="onFormClose"
-      @loaded="onFormLoaded"
-      @loading="onFormLoading"
+  <BaseFormDetail
+    :form-top="60"
+    :form-id="formId"
+    :form-name="formName"
+    @back="onFormClose"
+    @loaded="onFormLoaded"
+    @loading="onFormLoading"
   />
-  </el-drawer>
 </template>
 <script>
 import tool from '@/utils/tools'
@@ -61,6 +53,7 @@ export default {
 </script>
 <style lang="scss">
 .form-single-drawer {
+  top: 60px !important;
   .form-single-wrapper {
     display: block !important;
     width: 100% !important;

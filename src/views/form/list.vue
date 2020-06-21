@@ -28,7 +28,7 @@
 
     <el-drawer
       ref="detailDrawer"
-      :visible.sync="rowActionsDrawer.visible"
+      :visible.sync="rowDetailDrawer.visible"
       class="row-form-detail-drawer"
       custom-class="row-form-detail-wrapper"
       :with-header="false"
@@ -36,11 +36,30 @@
       :append-to-body="true"
     >
       <BaseFormDetail
-        :form-id="rowActionsDrawer.formId"
+        :form-top="60"
+        :form-id="rowDetailDrawer.formId || ''"
         :form-name="formName"
-        @back="rowActionsDrawer.visible = false"
+        @back="rowDetailDrawer.visible = false"
         @delete="onRowFormDeleted"
         @change="onRowFormChanged"
+      />
+    </el-drawer>
+
+    <el-drawer
+      ref="createDrawer"
+      :visible.sync="rowCreateDrawer.visible"
+      class="row-form-create-drawer"
+      custom-class="row-form-create-wrapper"
+      :with-header="false"
+      :modal="false"
+      :append-to-body="true"
+    >
+      <BaseFormAction
+        ref="createForm"
+        class="row-form-create-content"
+        @cancel="onRowCreatorCancel"
+        @prepare="onRowCreatorPrepare"
+        @create="onRowCreatorCommit"
       />
     </el-drawer>
   </div>
@@ -53,12 +72,14 @@ import FormApi from '@/apis/formApi'
 import { getFieldValueDisplay, getVisibleFieldModels } from '@/utils/formUtils'
 import BaseFormQuery from '@/components/BaseFormQuery'
 import BaseFormTable from '@/components/BaseFormTable'
+import BaseFormAction from '@/components/BaseFormAction'
 import BaseFormDetail from '@/components/BaseFormDetail'
 import BaseActionsPane from '@/components/BaseActionsPane'
 export default {
   components: {
     BaseActionsPane,
     BaseFormQuery,
+    BaseFormAction,
     BaseFormTable,
     BaseFormDetail
   },
@@ -91,13 +112,13 @@ export default {
         {
           text: '新窗口',
           onClick: function(row, index) {
-            this.openBlankWindow(`#/form/detail?formName=${this.formName}&formId=${row.id}`)
+            this.open(`#/form/detail?formName=${this.formName}&formId=${row.id}`)
           }
         },
         {
           text: '流程',
           onClick: function(row, index) {
-            this.openBlankWindow(`#/form/list/${this.formName}/${row.id}/flowchart`)
+            this.open(`#/form/flowchart/${this.formName}?formId=${row.id}`)
           }
         },
         {
@@ -112,7 +133,8 @@ export default {
       filterParams: null,
       rowActionsData: null,
       currentTableData: null,
-      rowActionsDrawer: null
+      rowDetailDrawer: null,
+      rowCreateDrawer: null
     }
   },
   watch: {
@@ -146,8 +168,9 @@ export default {
         formClass: {}
       }
       this.currentFieldModels = {}
-      this.formName = this.$route.params.form_name
+      this.formName = this.$route.params.formName
       this.formApi = new FormApi(this.formName)
+      this.initAction = this.$route.query ? this.$route.query._action : ''
       this.resetPageData()
     },
 
@@ -158,7 +181,11 @@ export default {
       this.loading = false
       this.rowActionsData = null
       this.currentTableData = null
-      this.rowActionsDrawer = {
+      this.rowDetailDrawer = {
+        formId: '',
+        visible: false
+      }
+      this.rowCreateDrawer = {
         visible: false
       }
     },
@@ -230,9 +257,21 @@ export default {
       this.loading = true
       this.formApi.queryFormPagedData(this.currentQuery.name, params, true).then((data) => {
         this.pagingInfo.total = data.total
-        this.currentTableData = data.list
+        this.currentTableData = data.list || []
         this.$nextTick(function() {
           this.$refs.formTable.setPaging(this.pagingInfo)
+          if (!tool.isBlank(this.initAction)) {
+            var initAction = this.initAction
+            this.initAction = ''
+            var initActionIndex = tool.inArray(initAction, this.actions, function(a, v) {
+              return a.name === v
+            })
+            if (initActionIndex < 0) {
+              this.$notify.error(`初始化事件(${initAction})不存在或未经授权`)
+              return
+            }
+            this.onFormActionTriggerd(initAction, this.actions[initActionIndex])
+          }
         })
       }).finally(() => {
         this.loading = false
@@ -250,22 +289,25 @@ export default {
       Object.assign(params, this.filterParams)
       this.loading = true
       this.formApi.queryFormPagedData(this.currentQuery.name, params).then((data) => {
-        this.currentTableData = data.list
+        this.currentTableData = data.list || []
       }).finally(() => {
         this.loading = false
       })
     },
 
     // 处理action回调
-    onFormActionTriggerd(action) {
-      this.$router.push({ path: `/form/create/${this.$route.params.form_name}/${action}` })
+    onFormActionTriggerd(actionName, formAction) {
+      this.rowCreateDrawer.visible = true
+      this.$nextTick(function() {
+        this.$refs.createForm.create(this.formName, formAction, this.$route.query)
+      })
     },
 
     /**
      *  在新窗口中打开指定页面
      */
-    openBlankWindow(linkUrl) {
-      tool.openBlankWindow(linkUrl)
+    open(linkUrl) {
+      tool.open(linkUrl)
     },
 
     /**
@@ -313,17 +355,16 @@ export default {
      * @param {Number} formId
      */
     showFormDetail(formId) {
-      this.rowActionsDrawer.visible = true
-      this.rowActionsDrawer.formId = formId
+      this.rowDetailDrawer.visible = true
+      this.rowDetailDrawer.formId = formId
     },
 
     /**
      * 表单内容更新回调
      */
-    onRowFormChanged(formName, formId, formData) {
+    onRowFormChanged(resData, formName, formId, formAction) {
       /* 更新结果集中的当前数据 */
       this.formApi.loadNamedQueryFormData(this.currentQuery.name, formId).then((data) => {
-        // console.log('替换当前列表中的数据项：', data, this.currentTableData)
         var newTableData = []
         var length = this.currentTableData.length
         for (var r = length - 1; r >= 0; r--) {
@@ -342,17 +383,49 @@ export default {
     /**
      * 表单内容更新回调
      */
-    onRowFormDeleted(formName, formId, formData) {
+    onRowFormDeleted(resData, formName, formId, formAction) {
       /* 当事件为删除时，则关闭详情页并从表格中移除数据 */
       this.$refs.detailDrawer.closeDrawer()
       var newTableData = []
-      var length = this.currentTableData.length
-      for (var r = length - 1; r >= 0; r--) {
-        if (this.currentTableData[r].id !== formId) {
-          newTableData[r] = this.currentTableData[r]
+      for (var item of this.currentTableData) {
+        if (tool.trim(item.id) === tool.trim(formId)) {
+          continue
         }
+        newTableData.push(item)
       }
       this.currentTableData = newTableData
+    },
+
+    /**
+     * 创建事件取消的回调
+     */
+    onRowCreatorCancel() {
+      this.rowCreateDrawer.visible = false
+    },
+
+    /**
+     * 创建事件就绪的回调
+     */
+    onRowCreatorPrepare() {
+
+    },
+
+    /**
+     * 创建事件提交的回调
+     */
+    onRowCreatorCommit(resData, formName, formId, formAction) {
+      this.rowCreateDrawer.visible = false
+      /* 立即展示新创建表单详情 */
+      this.showFormDetail(formId)
+      /* 并添加已创建的记录到列表的前面 */
+      this.formApi.loadNamedQueryFormData(this.currentQuery.name, formId).then((data) => {
+        // console.log('替换当前列表中的数据项：', data, this.currentTableData)
+        var newTableData = [data]
+        for (var item of this.currentTableData) {
+          newTableData.push(item)
+        }
+        this.currentTableData = newTableData
+      })
     }
   }
 }
@@ -361,9 +434,24 @@ export default {
 .form-query-result-list {
 }
 .row-form-detail-drawer {
+  top: 60px !important;
   .row-form-detail-wrapper {
     display: block !important;
     width: 100% !important;
+  }
+}
+.row-form-create-drawer {
+  top: 60px !important;
+  .row-form-create-wrapper {
+    display: block !important;
+    width: 100% !important;
+    .row-form-create-content {
+      position: absolute !important;
+      top: 0px !important;
+      left: 0px !important;;
+      bottom: 0px !important;
+      overflow-y: auto;
+    }
   }
 }
 </style>
