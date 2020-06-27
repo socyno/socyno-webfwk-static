@@ -1,5 +1,33 @@
 import tool from '@/utils/tools.js'
 
+export const FORM_FIELD_OPTIONS = {
+  /**
+   * 所有字段
+   */
+  ALL: 0,
+  /**
+   * 列表字段
+   */
+  ListOnly: 1,
+  /**
+   * 列表字段（如果为空，则使用表单字段）
+   */
+  ListFirst: 2,
+  /**
+   * 包含分隔符
+   */
+  SeparatorIncluded: 4,
+  /**
+   * 包含隐藏字段
+   */
+  HiddenIncluded: 8,
+  /**
+   * 当分组字段值均为空时，排除掉；
+   * 注意，此时必须配合数据来使用；
+   */
+  HiddenIfAllEmpty: 16
+}
+
 /**
  * 根据字段模型，设置并返回字段的显示控件
  * @param {Object} fieldModel
@@ -57,8 +85,13 @@ export function setFieldComponentType(fieldModel) {
     case 'timeonly':
       fieldModel.comType = 'TimeOnly'
       break
+    case 'separator':
+      fieldModel.comType = 'separator'
+      break
     default:
-      if (fieldModel.fieldOptionsType === 'DYNAMIC') {
+      if (fieldModel.type === 'button') {
+        fieldModel.comType = 'button'
+      } else if (fieldModel.fieldOptionsType === 'DYNAMIC') {
         fieldModel.comType = 'dynamicSelect'
       } else if (fieldModel.fieldOptionsType === 'STATIC') {
         fieldModel.comType = (fieldModel.type === 'array' && fieldModel.staticOptions)
@@ -131,11 +164,16 @@ export function parseFormClass(formClass, defaultData) {
     if (fieldModel.title.toLowerCase() === '<empty>') {
       fieldModel.title = ''
     }
-    fieldModel.smallTitle = false
-    if (fieldModel.title.length < 2) {
-      fieldModel.smallTitle = true
+    if (!tool.isBoolean(fieldModel.smallTitle)) {
+      fieldModel.smallTitle = false
+      if (fieldModel.title.length < 2) {
+        fieldModel.smallTitle = true
+      }
     }
     /* 布局信息, 长高信息 */
+    if (!fieldModel.position && fieldModel.customPosition) {
+      fieldModel.position = fieldModel.customPosition
+    }
     if (!fieldModel.placement && fieldModel.customPlacement) {
       fieldModel.placement = fieldModel.customPlacement
     }
@@ -199,14 +237,22 @@ export function parseFormClass(formClass, defaultData) {
  * @param {String} style list(列表模式) | form(表单模式)
  * @param {Object} defaultData
  */
-export function getVisibleFieldModels(formClass, style, defaultData) {
-  var fieldPosition = 'position'
-  if (tool.isString(style)) {
-    if (style === 'list') {
-      fieldPosition = 'listPosition'
+export function getVisibleFieldModels(formClass, defaultData, options) {
+  // var options =
+  if (arguments.length < 3) {
+    options = FORM_FIELD_OPTIONS.ALL
+    if (tool.isNumber(defaultData)) {
+      options = defaultData
+      defaultData = null
     }
-  } else if (arguments.length === 2) {
-    defaultData = style
+  }
+  if (!tool.isNumber(options)) {
+    throw new Error('第三个参数(options)必须为数字')
+  }
+  var fieldPosition = 'position'
+  if (options & FORM_FIELD_OPTIONS.ListFirst !== 0 ||
+       options & FORM_FIELD_OPTIONS.ListOnly !== 0) {
+    fieldPosition = 'listPosition'
   }
   var formModel = parseFormClass(formClass, defaultData)
   if (tool.isBlank(formModel) || !formModel.properties) {
@@ -216,20 +262,22 @@ export function getVisibleFieldModels(formClass, style, defaultData) {
   var fieldModels = []
   var fieldNoSort = []
   var maxPosition = 0
+  var fieldModel = null
+  var fieldType = null
   for (const key in formModel.properties) {
-    var fieldModel = formModel.properties[key]
+    fieldModel = formModel.properties[key]
+    fieldType = tool.toLower(fieldModel.fieldType)
     var position = fieldModel[fieldPosition]
-    if (tool.isBlank(position)) {
-      fieldNoSort.push(fieldModel)
-    } else if (position > 0) {
+    if (tool.looksLikeInteger(position) && position > 0) {
       if (position > maxPosition) {
         maxPosition = position
       }
       fieldModels.push(fieldModel)
+    } else if ((tool.isBlank(position) || tool.trim(position) === '0') &&
+      (fieldType.indexOf('hidden') !== 0 || fieldModel.comType !== 'separator')
+    ) {
+      fieldNoSort.push(fieldModel)
     }
-  }
-  if (fieldPosition === 'listPosition' && fieldModels.length <= 0) {
-    return getVisibleFieldModels(formClass, defaultData)
   }
   /* 返回前按排序设置进行排序 */
   fieldModels.sort((a, b) => {
@@ -251,13 +299,93 @@ export function getVisibleFieldModels(formClass, style, defaultData) {
     // 可选项的 label 字段
     'optionDisplay'
   ]
-  for (const fieldModel of fieldNoSort) {
-    if (tool.inArray(fieldModel.key, ignoreFields) >= 0) {
+  for (fieldModel of fieldNoSort) {
+    if (tool.isBlank(fieldModel.title) || tool.inArray(fieldModel.key, ignoreFields) >= 0) {
       continue
     }
     maxPosition += 10
     fieldModel[fieldPosition] = maxPosition
     fieldModels.push(fieldModel)
+  }
+
+  /**
+   * 处理 HiddenIfAllEmpty 的字段
+   */
+  if (options & FORM_FIELD_OPTIONS.HiddenIfAllEmpty !== 0) {
+    var emptyHiddenFields = null
+    var emptyRemovedFields = []
+    for (fieldModel of fieldModels) {
+      if (emptyHiddenFields) {
+        emptyHiddenFields.push(fieldModel)
+      } else if ((fieldType = tool.toLower(fieldModel.fieldType)).indexOf('hidden') === 0) {
+        if (emptyHiddenFields && emptyHiddenFields.length > 0) {
+          var gfield
+          var hasNonEmptyData = false
+          for (gfield of emptyHiddenFields) {
+            if ((fieldType === 'separator') ||
+              tool.isBlank(gfield.value) ||
+              (tool.isArray(gfield.value) && gfield.value.length <= 0) ||
+              (tool.isPlanObject(gfield.value) && Object.keys(gfield.value).length <= 0)) {
+              continue
+            }
+            hasNonEmptyData = true
+          }
+          if (!hasNonEmptyData) {
+            for (gfield of emptyHiddenFields) {
+              emptyRemovedFields.push(gfield)
+            }
+          }
+        }
+        emptyHiddenFields = null
+        if (fieldType === 'hiddenifallempty') {
+          emptyHiddenFields = []
+        } else {
+          emptyRemovedFields.push(fieldModel)
+        }
+      } else {
+        emptyRemovedFields.push(fieldModel)
+      }
+    }
+    fieldModels = emptyRemovedFields
+  }
+
+  /**
+   * 处理 HiddenIncluded
+   */
+  if (options & FORM_FIELD_OPTIONS.HiddenIncluded === 0) {
+    var hiddenRemovedFields = []
+    var hiddenFieldsStarted = false
+    for (fieldModel of fieldModels) {
+      if (!hiddenFieldsStarted) {
+        hiddenRemovedFields.push(fieldModel)
+      } else if ((fieldType = tool.toLower(fieldModel.fieldType)).indexOf('hidden') === 0) {
+        hiddenFieldsStarted = false
+        if (fieldType === 'hidden') {
+          hiddenFieldsStarted = true
+        }
+      }
+    }
+    fieldModels = hiddenRemovedFields
+  }
+
+  /**
+   * 处理 SeparatorIncluded
+   */
+  if (options & FORM_FIELD_OPTIONS.SeparatorIncluded === 0) {
+    var separatorRemovedFields = []
+    for (fieldModel of fieldModels) {
+      if (tool.toLower(fieldModel.fieldType) !== 'separator') {
+        separatorRemovedFields.push(fieldModel)
+      }
+    }
+    fieldModels = separatorRemovedFields
+  }
+
+  /**
+   * 针对列表优先的情况，在列表字段为空时，需要重新按照表单的形式重新计算
+   */
+  if (options & FORM_FIELD_OPTIONS.ListFirst !== 0 && fieldModels.length <= 0) {
+    return getVisibleFieldModels(formClass, defaultData, options - FORM_FIELD_OPTIONS.ListFirst)
   }
   return fieldModels
 }

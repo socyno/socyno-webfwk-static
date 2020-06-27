@@ -19,7 +19,6 @@ var AllEnumMappers = {
 }
 
 var enums = {
-
   getDisplay: function(e, v) {
     return AllEnumMappers[e][v]
   },

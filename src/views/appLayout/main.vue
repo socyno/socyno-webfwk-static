@@ -91,6 +91,7 @@ export default {
   right: 0;
   top: 0;
   // transition: 0.2s;
+  white-space: nowrap;
 }
 .main {
   position: fixed;

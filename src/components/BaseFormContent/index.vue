@@ -9,17 +9,24 @@
           <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
           <BaseFormContent
             v-for="(vitem, vindex) in field.value"
+            :ref="`InnerForm:${field.key}`"
             :key="`${field.key}-${vindex}`"
             :form-id="formId"
             :form-name="formName"
             :form-model="field.items"
+            :parent-field="field"
             :parent-field-models="parentFieldModelsConcat()"
             :default-data="vitem"
+            :editable="editable && innerEditable && !field.readonly"
           />
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
         </div>
       </div>
+      <!-- 分隔线 -->
+      <el-divider v-else-if="field.comType === 'separator'" content-position="center">
+        <BaseFormLabel :tooltip="true" without-colon :field-model="field" />
+      </el-divider>
       <!-- 长文本本显示 -->
       <div v-else-if="field.comType === 'areaText'" v-show="checkFieldVisible(field)" :key="k" :class="genFieldContainerStyle(field)">
         <BaseFormLabel :tooltip="editable" :class="genFieldLabelSytle(field)" :field-model="field" />
@@ -116,6 +123,14 @@
           />
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
+        </div>
+      </div>
+      <!-- 操作按钮 -->
+      <div v-else-if="field.comType === 'button'" v-show="checkFieldVisible(field)" :key="k" :class="genFieldContainerStyle(field)">
+        <div v-if="editable && !field.readonly && field.title" :class="genFieldContentSytle(field)">
+          <el-button :size="field.styleSize || 'mini'" :type="field.styleType || 'text'" @click="onFieldButtonClick(field)">
+            {{ field.title }}
+          </el-button>
         </div>
       </div>
       <!-- 常规短文本字段 -->
@@ -221,6 +236,7 @@
             v-model="field.value"
             size="mini"
             :placeholder="'请输入' + field.title"
+            :type="field.type === 'integer' ? 'number' : 'text'"
             @input="$forceUpdate()"
           />
           <!-- eslint-disable-next-line vue/no-v-html -->
@@ -238,7 +254,7 @@ import TemplateConfig from '@/components/BaseFormItem/TemplateConfig'
 import DynamicSingleSelector from '@/components/BaseFormItem/DynamicSingleSelector'
 import DynamicMultipleCreator from '@/components/BaseFormItem/DynamicMultipleCreator'
 import DynamicMultipleSelector from '@/components/BaseFormItem/DynamicMultipleSelector'
-import { getFieldValueDisplay, getVisibleFieldModels, getFieldPlacement } from '@/utils/formUtils'
+import { getFieldValueDisplay, getVisibleFieldModels, getFieldPlacement, FORM_FIELD_OPTIONS } from '@/utils/formUtils'
 export default {
   name: 'BaseFormContent',
   components: {
@@ -288,6 +304,13 @@ export default {
       }
     },
     /**
+     * 嵌入式表单的父字段
+     */
+    parentField: {
+      type: Object,
+      default: null
+    },
+    /**
      * 父组件的字段模型列表
      */
     parentFieldModels: {
@@ -298,6 +321,13 @@ export default {
      * 是否只展示第一行
      */
     showOnlyFirstLine: {
+      type: Boolean,
+      default: false
+    },
+    /**
+     * 内嵌表单是否可编辑
+     */
+    innerEditable: {
       type: Boolean,
       default: false
     }
@@ -316,14 +346,14 @@ export default {
           return
         }
         // console.log('基础编辑表单模型更新，模型和数据如下:', formModel, this.defaultData)
-        this.fieldModels = getVisibleFieldModels(formModel, this.defaultData)
+        this.fieldModels = getVisibleFieldModels(formModel, this.defaultData, FORM_FIELD_OPTIONS.HiddenIfAllEmpty | FORM_FIELD_OPTIONS.SeparatorIncluded)
       }
     },
     defaultData: {
       immediate: true,
       handler(defaultData) {
         // console.log('基础编辑表单数据更新，模型和数据如下:', this.formModel, defaultData)
-        this.fieldModels = getVisibleFieldModels(this.formModel, defaultData)
+        this.fieldModels = getVisibleFieldModels(this.formModel, defaultData, FORM_FIELD_OPTIONS.HiddenIfAllEmpty | FORM_FIELD_OPTIONS.SeparatorIncluded)
       }
     }
   },
@@ -369,6 +399,19 @@ export default {
       var data = {}
       var validPassed = true
       for (const field of this.fieldModels) {
+        if (field.comType === 'innerForm' && !field.readonly && this.innerEditable) {
+          var fieldValues = []
+          if (this.$refs[`InnerForm:${field.key}`]) {
+            for (var innerForm of this.$refs[`InnerForm:${field.key}`]) {
+              var innerData = innerForm.getFormValidData()
+              if (!innerData) {
+                return null
+              }
+              fieldValues.push(innerData)
+            }
+          }
+          field.value = fieldValues
+        }
         if (!validation.call(this, field)) {
           validPassed = false
           break
@@ -411,7 +454,7 @@ export default {
      * @param {Object} field
      */
     genFieldContainerStyle(field) {
-      var clazz = 'column-style-span  column-style-span' +
+      var clazz = 'column-style-span column-style-span' +
         getFieldPlacement(field)
       if (!this.editable || field.readonly) {
         clazz += ' column-style-readonly'
@@ -436,13 +479,30 @@ export default {
      */
     genFieldContentSytle(field) {
       var clazz = 'column-style-content'
-      if (field.smallTitle) {
+      if (field.smallTitle || field.comType === 'button') {
         clazz += ' column-small-title'
       }
       if (field.comType === 'areaText') {
         clazz += ' column-longtext-content'
       }
       return clazz
+    },
+
+    /**
+     * 自定义按钮点击回调
+     */
+    onFieldButtonClick(field) {
+      this.$emit('button', field, this)
+      var parent = this
+      var fields = [{
+        field: field,
+        form: this
+      }]
+      while (parent && parent.parentField && parent.parentField.comType === 'innerForm') {
+        fields.push({ field: parent.parentField, form: parent.$parent })
+        parent.$parent.$emit('button', fields, parent.$parent)
+        parent = parent.$parent
+      }
     }
   }
 }
@@ -456,10 +516,10 @@ export default {
   .column-style-span {
     display: inline-block;
     vertical-align: top;
-    margin-top: 15px;
+    margin-bottom: 15px;
   }
   .column-style-readonly {
-    margin-top: 25px;
+    margin-bottom: 25px;
     .el-tooltip.column-style-content {
       white-space: nowrap;
       text-overflow: ellipsis !important;
@@ -514,7 +574,7 @@ export default {
   }
   .column-style-title.column-small-title {
     text-align: center;
-    width: 20px !important;
+    width: 40px !important;
   }
   .column-style-content {
     overflow: hidden;
@@ -526,9 +586,13 @@ export default {
     .el-range-editor--mini.el-input__inner {
       width: 100% !important;
     }
+    .el-button {
+      margin: 0 !important;
+      padding: 5px !important;
+    }
   }
   .column-style-content.column-small-title {
-    width: calc(100% - 25px) !important;
+    width: calc(100% - 45px) !important;
   }
   .column-longtext-content {
     overflow: auto;
@@ -539,6 +603,9 @@ export default {
   }
   .column-style-required {
     color: orangered;
+  }
+  .el-divider {
+    margin: 10px 0 25px 0 !important;
   }
 }
 </style>

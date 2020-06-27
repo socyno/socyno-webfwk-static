@@ -69,7 +69,7 @@
 
 import '@/styles/form.scss'
 import tool from '@/utils/tools'
-import { parseFormClass, getFieldValueDisplay, getVisibleFieldModels } from '@/utils/formUtils'
+import { parseFormClass, getFieldValueDisplay, getVisibleFieldModels, FORM_FIELD_OPTIONS } from '@/utils/formUtils'
 import TemplateConfig from '@/components/BaseFormItem/TemplateConfig'
 export default {
   components: {
@@ -137,7 +137,7 @@ export default {
           this.fieldModels = columns
         } else if (tool.isPlainObject(columns)) {
           this.formModel = parseFormClass(columns)
-          this.fieldModels = getVisibleFieldModels(columns, 'list')
+          this.fieldModels = getVisibleFieldModels(columns, FORM_FIELD_OPTIONS.ListFirst)
         }
       }
     }
