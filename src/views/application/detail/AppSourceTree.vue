@@ -86,7 +86,7 @@ export default {
           } catch (error) {
             // eslint-disable-next-line
             console.error(error)
-            this.$message.info('该文件无法预览.')
+            this.$notify.info('该文件无法预览.')
           }
           if (str.length) {
             this.dialogVisible = true

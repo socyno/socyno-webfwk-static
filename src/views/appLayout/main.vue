@@ -28,6 +28,7 @@
   </div>
 </template>
 <script>
+import tool from '@/utils/tools'
 import { Nav, Sidebar } from '@/components/AppLayout/'
 
 export default {
@@ -40,12 +41,9 @@ export default {
     handleFold() {
       this.$store.dispatch('uiControl/fold')
     },
+
     inIframe() {
-      try {
-        return window.self !== window.top
-      } catch (e) {
-        return true
-      }
+      return tool.inIframe()
     }
   }
 }

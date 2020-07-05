@@ -4,29 +4,14 @@
       v-if="queryModel"
       ref="queryForm"
       :editable="true"
+      :collapsible="true"
       :form-id="formId"
       :form-name="formName"
-      :show-only-first-line="showOnlyFirstLine"
       :form-model="queryModel.formClass"
       :parent-field-models="parentFieldModels"
+      :actions="[{ name: '查询' }]"
+      @actions="onFormSubmitOrQuery"
     />
-    <div class="form-query-buttons">
-      <el-button v-if="!showOnlyFirstLine" type="text" size="mini" @click="showOnlyFirstLine = true">
-        收起更多字段
-      </el-button>
-      <el-button v-else type="text" size="mini" @click="showOnlyFirstLine = false">
-        展开更多字段
-      </el-button>
-      <el-button type="primary" size="mini" @click="onFormSubmitOrQuery">
-        查询
-      </el-button>
-      <!-- 由于后端状态机V1版本的兼容性问题，无法显示多查询的中文名，暂隐藏该功能 -->
-      <el-select v-show="queryModels && queryModels.length < -1" v-model="selected" size="mini" :clearable="false" :multiple="false">
-        <slot v-for="(query, queryIdx) in queryModels">
-          <el-option :key="queryIdx" :label="query.display" :value="queryIdx" />
-        </slot>
-      </el-select>
-    </div>
   </div>
 </template>
 <script>
@@ -60,8 +45,7 @@ export default {
   data() {
     return {
       selected: 0,
-      queryModel: null,
-      showOnlyFirstLine: true
+      queryModel: null
     }
   },
   watch: {

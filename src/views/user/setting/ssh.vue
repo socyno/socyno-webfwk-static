@@ -74,7 +74,7 @@ export default {
     },
     handleSubmit() {
       addSSHKey(this.form).then(res => {
-        this.$message.success('新增成功')
+        this.$notify.success('新增成功')
         this.form = {}
         this.loadData()
       })
@@ -88,7 +88,7 @@ export default {
       })
         .then(() => {
           deleteSSHKey(sshid).then(res => {
-            that.$message.success('删除成功')
+            that.$notify.success('删除成功')
             that.loadData()
           })
         })

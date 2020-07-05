@@ -135,9 +135,9 @@ export default {
       }).then(() => {
         FormApi.deleteDefinedForm(formKey).then(res => {
           this.loadDefinedForms()
-          this.$message.success('删除成功')
+          this.$notify.success('删除成功')
         }).catch(e => {
-          this.$message.success('删除失败')
+          this.$notify.success('删除失败')
         })
       })
     },
@@ -149,9 +149,9 @@ export default {
       }).then(() => {
         FormApi.disableDefinedForm(formName).then(res => {
           this.loadDefinedForms()
-          this.$message.success(`${state == null || state ? '禁用' : '启用'}成功`)
+          this.$notify.success(`${state == null || state ? '禁用' : '启用'}成功`)
         }).catch(e => {
-          this.$message.success(`${state == null || state ? '禁用' : '启用'}失败`)
+          this.$notify.success(`${state == null || state ? '禁用' : '启用'}失败`)
         })
       })
     },

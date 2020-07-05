@@ -400,22 +400,5 @@ class FormApi {
       return Promise.resolve(res.data)
     })
   }
-
-  /**
-   * 加载指定查询下的单条表单数据
-   * @param {String} namedQuery
-   * @param {Integer} formId
-   */
-  loadNamedQueryFormData(namedQuery, formId) {
-    if (!tool.looksLikeInteger(formId) || tool.isBlank(namedQuery)) {
-      throw new Error('IllegalArguments: the form id invalid or named query missing')
-    }
-    return request({
-      url: `/form/get/${this.formName}/${namedQuery}/${formId}`,
-      method: 'get'
-    }).then((res) => {
-      return Promise.resolve(res.data)
-    })
-  }
 }
 export default FormApi

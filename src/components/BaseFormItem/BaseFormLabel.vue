@@ -5,10 +5,10 @@
     <span slot="reference">
       {{ fieldModel.title }}
       <i class="el-icon-question" />
-      <span v-if="!withoutColon && !fieldModel.smallTitle">：</span>
+      <span v-if="!withoutColon && !fieldModel.titleWithoutColon">：</span>
     </span>
   </el-popover>
-  <span v-else>{{ fieldModel.title }}<span v-if="!withoutColon && !fieldModel.smallTitle">：</span></span>
+  <span v-else>{{ fieldModel.title }}<span v-if="!withoutColon && !fieldModel.titleWithoutColon">：</span></span>
 </template>
 <script>
 export default {

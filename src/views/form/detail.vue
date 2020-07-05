@@ -1,8 +1,12 @@
 <template>
+  <!--
+    此处判断是否在 iframe 内嵌入来决定事件表单的顶部位置
+   （ 此时菜单是不可见的, 也就无需预留其显示位置）
+  -->
   <BaseFormDetail
-    :form-top="60"
     :form-id="formId"
     :form-name="formName"
+    :form-top="inIframe() ? 0 : 60"
     @back="onFormClose"
     @loaded="onFormLoaded"
     @loading="onFormLoading"
@@ -32,6 +36,10 @@ export default {
     this.resetData()
   },
   methods: {
+    inIframe() {
+      return tool.inIframe()
+    },
+
     resetData() {
       this.formId = this.$route.query.formId
       this.formName = this.$route.query.formName
@@ -51,12 +59,3 @@ export default {
   }
 }
 </script>
-<style lang="scss">
-.form-single-drawer {
-  top: 60px !important;
-  .form-single-wrapper {
-    display: block !important;
-    width: 100% !important;
-  }
-}
-</style>

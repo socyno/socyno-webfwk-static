@@ -29,8 +29,8 @@
   </div>
 </template>
 <script>
-import { Message } from 'element-ui'
 import tool from '@/utils/tools'
+import { Notification } from 'element-ui'
 import FileUploaderTable from './FileUploaderTable'
 export default {
   components: {
@@ -69,10 +69,16 @@ export default {
       resultFiles: []
     }
   },
-  mounted() {
-    if (this.value) {
-      // console.log('附件初始化清单数据如下：', this.value)
-      this.resultFiles = tool.isArray(this.value) ? this.value : [this.value]
+  watch: {
+    value: {
+      immediate: true,
+      handler(newValue) {
+        this.resultFiles = []
+        if (newValue) {
+          // console.log('附件初始化清单数据如下：', newValue)
+          this.resultFiles = tool.isArray(newValue) ? newValue : [newValue]
+        }
+      }
     }
   },
   methods: {
@@ -98,7 +104,7 @@ export default {
       } else {
         // 否则丢弃掉页面的附件项，并弹出提示信息
         resultFiles.splice(fileIndex, 1)
-        Message.error(response.message || '文件上传失败')
+        Notification.error(response.message || '文件上传失败')
       }
       this.resultFiles = resultFiles
       this.$emit('input', this.resultFiles)

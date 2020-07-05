@@ -1,27 +1,12 @@
 <template>
   <div>
-    <BaseFormContent
-      v-if="formModel"
+    <BaseFormContentConfig
+      v-if="fieldModels"
       ref="formModel"
-      :form-name="formData['#']"
-      :form-model="formModel"
-      :default-data="formData"
-      :editable="true"
-      :inner-editable="true"
-      @button="onFieldButtonClick"
+      :field-models="fieldModels"
+      :actions="formActions"
+      @actions="onFormActionsClick"
     />
-    <el-button v-if="formModel" type="primary" size="small" @click="saveFormAttributes">
-      保存变更
-    </el-button>
-    <el-button v-if="formModel" type="primary" size="small" @click="preViewAttributes()">
-      只读预览
-    </el-button>
-    <el-button v-if="formModel" type="primary" size="small" @click="preViewAttributesForEditor()">
-      编辑预览
-    </el-button>
-    <el-button v-if="formModel" type="primary" size="small" @click="showFieldCreationForm()">
-      添加字段
-    </el-button>
     <el-dialog
       v-if="previewFormModel"
       :title="`界面模型预览 - ${(previewFormModel.model && previewFormModel.model.title) || ''}`"
@@ -38,6 +23,8 @@
         :form-model="previewFormModel.model"
         :default-data="previewFormModel.data"
         :editable="previewFormModel.editable"
+        :show-all="true"
+        :draggable="true"
       />
       <BaseFormTable
         v-else-if="previewFormModel.model"
@@ -80,11 +67,13 @@ import { Loading } from 'element-ui'
 import FormApi from '@/apis/formApi'
 import BaseFormTable from '@/components/BaseFormTable'
 import BaseFormContent from '@/components/BaseFormContent'
+import BaseFormContentConfig from '@/components/BaseFormContent/config'
 import { getVisibleFieldModels, fixNoPlacementCompatibility } from '@/utils/formUtils'
 export default {
   components: {
     BaseFormTable,
-    BaseFormContent
+    BaseFormContent,
+    BaseFormContentConfig
   },
   props: {
     formClass: {
@@ -99,6 +88,7 @@ export default {
     return {
       formData: null,
       formModel: null,
+      fieldModels: null,
       /**
        * 待预览的界面模型
        */
@@ -121,7 +111,28 @@ export default {
           ]
         },
         visible: false
-      }
+      },
+      /**
+       * 表单事件
+       */
+      formActions: [
+        {
+          name: '保存变更',
+          fun: this.saveFormAttributes
+        },
+        {
+          name: '只读预览',
+          fun: this.preViewAttributes
+        },
+        {
+          name: '编辑预览',
+          fun: this.preViewAttributesForEditor
+        },
+        {
+          name: '添加字段',
+          fun: this.showFieldCreationForm
+        }
+      ]
     }
   },
   watch: {
@@ -138,59 +149,11 @@ export default {
      */
     createConfigFormModel() {
       // console.log('界面模型数据：', this.formClass)
-      if (!this.formClass || !this.formClass.fields) {
-        this.formData = null
-        this.formModel = null
+      this.fieldModels = null
+      if (!this.formClass || !this.formClass.formModel) {
         return
       }
-      this.formModel = {
-        properties: {
-        }
-      }
-      this.formData = {
-        '#': this.formClass.path + ' - ' + this.formClass.names.join(', ')
-      }
-      this.formModel.properties['#'] = {
-        key: '#',
-        type: 'string',
-        title: '表单名称',
-        placement: 12,
-        readonly: true,
-        position: 1
-      }
-      this.formModel.properties[':form'] = {
-        key: ':form',
-        type: 'array',
-        title: '表单属性',
-        placement: 12,
-        position: 2,
-        fieldType: 'FormView',
-        items: {
-          properties: {
-            title: {
-              key: 'title',
-              type: 'string',
-              title: '标题',
-              smallTitle: true,
-              placement: 4,
-              position: 1
-            }
-          }
-        }
-      }
-      for (var field in this.formClass.fields) {
-        var attrs = this.formClass.fields[field]
-        if (!this.formClass.fields.hasOwnProperty(field)) {
-          continue
-        }
-        if (field === ':form') {
-          this.formData[field] = [Object.assign(attrs, { editable: !attrs.readonly })]
-          continue
-        }
-        this.addFormField(field, attrs)
-      }
-      // 数据构建完成后，重新渲染
-      this.rerendForm()
+      this.fieldModels = getVisibleFieldModels(this.formClass.formModel)
     },
 
     /**
@@ -228,17 +191,19 @@ export default {
         key: field,
         type: 'array',
         title: field,
+        titleWidth: 200,
         placement: 12,
-        position: 2,
+        position: tool.looksLikeInteger(attrs.position) && attrs.position > 0 ? (attrs.position + 10) : '',
         fieldType: 'FormView',
         items: {
           properties: {
             title: {
               type: 'string',
               title: '标题',
-              smallTitle: true,
+              titleWidth: 80,
+              titleWithoutColon: true,
               placement: 4,
-              position: 10,
+              position: 5,
               description: '<pre>\n' +
                     '字段的显示标题，请注意以下特殊事项:\n' +
                     '  1) 如希望不显示标题，请在标题中写入 <empty> 即可;\n' +
@@ -247,9 +212,10 @@ export default {
             fieldType: {
               title: '类型',
               type: 'string',
-              smallTitle: true,
-              placement: 3,
-              position: 20,
+              titleWidth: 80,
+              titleWithoutColon: true,
+              placement: 2,
+              position: 10,
               fieldOptionsType: 'STATIC',
               staticOptions: [
                 { value: 'readonly', display: '只读文本' },
@@ -257,39 +223,75 @@ export default {
                 { value: 'hidden', display: '以下字段不显示' },
                 { value: 'hiddenIfAllEmpty', display: '以下字段值全为空不显示' }
               ],
-              readonly: !attrs.custom || attrs.modifiable
+              readonly: !attrs.custom || !attrs.modifiable
             },
             required: {
               title: '必填',
               type: 'boolean',
-              smallTitle: true,
+              titleWidth: 80,
+              titleWithoutColon: true,
               placement: 2,
-              position: 30,
-              readonly: !attrs.custom || attrs.modifiable
+              position: 20,
+              readonly: !attrs.custom || !attrs.modifiable
             },
             editable: {
-              title: '编辑',
+              title: '可编辑',
               type: 'boolean',
-              smallTitle: true,
+              titleWidth: 80,
+              titleWithoutColon: true,
               placement: 2,
-              position: 40,
-              readonly: !attrs.custom || attrs.modifiable
+              position: 30,
+              readonly: !attrs.custom || !attrs.modifiable
             },
             delete: {
               type: 'button',
               title: '删除字段',
-              position: 45,
+              position: 40,
+              titleWidth: 0,
               placement: 1,
               styleSize: 'mini',
               readonly: !attrs.custom,
               styleType: 'danger'
             },
+            titleWidth: {
+              type: 'string',
+              title: '标题宽度',
+              titleWidth: 80,
+              titleWithoutColon: true,
+              placement: 2,
+              position: 50,
+              fieldOptionsType: 'STATIC',
+              staticOptions: [
+                { value: '', display: '默认' },
+                { value: '20', display: '20px' },
+                { value: '40', display: '20px' },
+                { value: '60', display: '20px' },
+                { value: '80', display: '20px' },
+                { value: '120', display: '20px' },
+                { value: '160', display: '20px' },
+                { value: '200', display: '20px' }
+              ]
+            },
+            titleWithoutColon: {
+              type: 'string',
+              title: '标题冒号',
+              titleWidth: 80,
+              titleWithoutColon: true,
+              placement: 2,
+              position: 51,
+              fieldOptionsType: 'STATIC',
+              staticOptions: [
+                { value: '', display: '有' },
+                { value: 'true', display: '无' }
+              ]
+            },
             position: {
               title: '序/单',
               type: 'integer',
-              smallTitle: true,
+              titleWidth: 80,
+              titleWithoutColon: true,
               placement: 2,
-              position: 50,
+              position: 52,
               description: '<pre>\n' +
                     '定义字段在表单模式下的排列顺序, 当值 <= 0 时, 字段将不被显示。\n' +
                     '即：支持在表单模式和列表模式下拥有独立的排序和空间宽度配置\n' +
@@ -298,9 +300,10 @@ export default {
             placement: {
               title: '宽/单',
               type: 'integer',
-              smallTitle: true,
+              titleWidth: 80,
+              titleWithoutColon: true,
               placement: 2,
-              position: 55,
+              position: 53,
               fieldOptionsType: 'STATIC',
               staticOptions: [
                 { value: '1', display: '1/12' },
@@ -327,9 +330,10 @@ export default {
             listPosition: {
               title: '序/列',
               type: 'integer',
-              smallTitle: true,
+              titleWidth: 80,
+              titleWithoutColon: true,
               placement: 2,
-              position: 60,
+              position: 54,
               description: '<pre>\n' +
                     '定义字段在列表模式下的排列顺序, 当值 <= 0 时, 字段将不被显示。\n' +
                     '即：支持在表单模式和列表模式下拥有独立的排序和空间宽度配置\n' +
@@ -338,30 +342,20 @@ export default {
             listWidth: {
               title: '宽/列',
               type: 'integer',
-              smallTitle: true,
+              titleWidth: 80,
+              titleWithoutColon: true,
               placement: 2,
-              position: 65,
+              position: 55,
               description: '<pre>\n' +
                     '定义字段在列表模式下的空间宽度。注意：与表单模式下的宽度配置的区别，此处为像素宽度（px）\n' +
-                    '</pre>'
-            },
-            placerows: {
-              title: '高度',
-              type: 'integer',
-              smallTitle: true,
-              placement: 2,
-              position: 68,
-              description: '<pre>\n' +
-                    '定义自表单模式下，字段控件的空间高度, 当前仅适用于:\n' +
-                    '1) 定义文本编辑框显示行数;\n' +
-                    '2) 针对文件上传控件, 当明确定义且值 &lt;= 1 时, 将禁用拖放功能，仅提供文件选择器;\n' +
                     '</pre>'
             },
             pattern: {
               title: '格式',
               type: 'string',
-              smallTitle: true,
-              placement: 12,
+              titleWidth: 80,
+              titleWithoutColon: true,
+              placement: 10,
               position: 70,
               description: '<pre>\n' +
                     '填写内容的格式验证模式（<a style="color: red;" target="_blank" href="https://www.runoob.com/jsref/jsref-obj-regexp.html">正则表达式形式</a>）。\n' +
@@ -372,10 +366,24 @@ export default {
                     '  3）限制为英文字母或数字 ： ^[a-zA-z0-9]+$\n' +
                     '</pre>'
             },
+            placerows: {
+              title: '高度',
+              type: 'integer',
+              titleWidth: 80,
+              titleWithoutColon: true,
+              placement: 2,
+              position: 75,
+              description: '<pre>\n' +
+                    '定义自表单模式下，字段控件的空间高度, 当前仅适用于:\n' +
+                    '1) 定义文本编辑框显示行数;\n' +
+                    '2) 针对文件上传控件, 当明确定义且值 &lt;= 1 时, 将禁用拖放功能，仅提供文件选择器;\n' +
+                    '</pre>'
+            },
             description: {
               title: '描述',
               type: 'string',
-              smallTitle: true,
+              titleWidth: 80,
+              titleWithoutColon: true,
               placement: 12,
               placerows: 3,
               position: 80,
@@ -389,7 +397,8 @@ export default {
             template: {
               title: '模板',
               type: 'string',
-              smallTitle: true,
+              titleWidth: 80,
+              titleWithoutColon: true,
               placement: 12,
               placerows: 3,
               position: 90,
@@ -515,7 +524,14 @@ export default {
           this.$notify.error('字段(' + name + ')已存在')
           return
         }
-        this.addFormField(name, { custom: true })
+        this.addFormField(name, {
+          key: name,
+          custom: true,
+          modifiable: true,
+          readonly: true,
+          type: 'string',
+          fieldType: 'readonly'
+        })
         this.closeFieldCreationForm()
         this.rerendForm()
       })
@@ -539,11 +555,21 @@ export default {
      * @param {Object} baseContentForm
      */
     onFieldButtonClick(field, baseContentForm) {
+      console.log('点击字段删除按钮：', field)
       if (!tool.isArray(field) && field.length !== 2) {
         return
       }
       if (field[0] && field[1] && field[0].field.key === 'delete') {
         this.removeFormField(field[1].field.key)
+      }
+    },
+
+    /**
+     *  自定义表单按钮点击回调
+     */
+    onFormActionsClick(action) {
+      if (action && tool.isFunction(action.fun)) {
+        action.fun.call(this)
       }
     }
   }

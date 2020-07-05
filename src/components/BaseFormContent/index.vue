@@ -1,250 +1,221 @@
 <template>
-  <div class="form-content-block">
-    <slot v-for="(field, k) in fieldModels">
+  <BaseFormContentBase
+    :editable="editable"
+    :collapsible="collapsible"
+    :field-models="fieldModels"
+  >
+    <template v-slot:content="{ field }">
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
       <!-- 内嵌的表单 -->
-      <div v-if="field.comType === 'innerForm'" v-show="checkFieldVisible(field)" :key="k" :class="genFieldContainerStyle(field)">
-        <BaseFormLabel :tooltip="editable" :class="genFieldLabelSytle(field)" :field-model="field" />
-        <div :class="genFieldContentSytle(field)">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
-          <BaseFormContent
-            v-for="(vitem, vindex) in field.value"
-            :ref="`InnerForm:${field.key}`"
-            :key="`${field.key}-${vindex}`"
-            :form-id="formId"
-            :form-name="formName"
-            :form-model="field.items"
-            :parent-field="field"
-            :parent-field-models="parentFieldModelsConcat()"
-            :default-data="vitem"
-            :editable="editable && innerEditable && !field.readonly"
-          />
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
+      <div v-if="field.comType === 'innerForm'">
+        <BaseFormContent
+          v-for="(vitem, vindex) in field.value"
+          :ref="`InnerForm:${field.key}`"
+          :key="`${field.key}-${vindex}`"
+          :form-id="formId"
+          :form-name="formName"
+          :form-model="field.items"
+          :parent-field="field"
+          :parent-field-models="parentFieldModelsConcat()"
+          :default-data="vitem"
+          :editable="editable && innerEditable && !field.readonly"
+          :collapsible="innerCollapsible"
+        />
+      </div>
+      <!-- 长文本本显示 -->
+      <div v-else-if="field.comType === 'areaText'">
+        <el-input
+          v-if="editable && !field.readonly"
+          v-model="field.value"
+          size="mini"
+          type="textarea"
+          :rows="field.placerows > 0 ? field.placerows : 3"
+          :placeholder="'请输入' + field.title"
+          @input="$forceUpdate()"
+        />
+        <TemplateConfig
+          v-else-if="field.template"
+          :template="field.template"
+          :field-model="field"
+          :form-data="defaultData"
+        />
+        <pre v-else>{{ getTextDisplay(field) }}</pre>
+      </div>
+      <!-- 文件上传 -->
+      <div v-else-if="field.comType === 'file'">
+        <FileUploader
+          v-model="field.value"
+          :dragable="!field.placerows || field.placerows > 1"
+          :editable="editable && !field.readonly"
+          :field-model="field"
+          :form-id="formId"
+          :form-name="formName"
+        />
+      </div>
+      <!-- 动态下拉多选框场景 -->
+      <div v-else-if="field.comType === 'tableView'">
+        <DynamicMultipleCreator
+          v-if="field.listItemCreationFormClass"
+          v-model="field.value"
+          :form-id="formId"
+          :form-name="formName"
+          :editable="editable && !field.readonly"
+          :field-model="field"
+          :parent-field-models="parentFieldModelsConcat()"
+        />
+        <DynamicMultipleSelector
+          v-else
+          v-model="field.value"
+          :form-id="formId"
+          :form-name="formName"
+          :editable="editable && !field.readonly"
+          :field-model="field"
+          :parent-field-models="parentFieldModelsConcat()"
+        />
+      </div>
+      <!-- 动态下拉单选框场景 -->
+      <div v-else-if="field.comType === 'dynamicSelect'">
+        <DynamicSingleSelector
+          v-if="editable && !field.readonly"
+          v-model="field.value"
+          :form-id="formId"
+          :form-name="formName"
+          :field-model="field"
+          :parent-field-models="parentFieldModelsConcat()"
+        />
+        <TemplateConfig
+          v-else-if="field.template"
+          :template="field.template"
+          :field-model="field"
+          :form-data="defaultData"
+        />
+        <div v-else>
+          {{ getTextDisplay(field) }}
         </div>
       </div>
       <!-- 分隔线 -->
       <el-divider v-else-if="field.comType === 'separator'" content-position="center">
         <BaseFormLabel :tooltip="true" without-colon :field-model="field" />
       </el-divider>
-      <!-- 长文本本显示 -->
-      <div v-else-if="field.comType === 'areaText'" v-show="checkFieldVisible(field)" :key="k" :class="genFieldContainerStyle(field)">
-        <BaseFormLabel :tooltip="editable" :class="genFieldLabelSytle(field)" :field-model="field" />
-        <div v-if="!editable || field.readonly" :class="genFieldContentSytle(field)">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
-          <TemplateConfig v-if="field.template" :template="field.template" :field-model="field" :form-data="defaultData" />
-          <pre v-else>{{ getTextDisplay(field) }}</pre>
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
-        </div>
-        <div v-else :class="genFieldContentSytle(field)">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
-          <el-input
-            v-model="field.value"
-            size="mini"
-            type="textarea"
-            :rows="field.placerows > 0 ? field.placerows : 3"
-            :placeholder="'请输入' + field.title"
-            @input="$forceUpdate()"
-          />
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
-        </div>
-      </div>
-      <!-- 文件上传 -->
-      <div v-else-if="field.comType === 'file'" v-show="checkFieldVisible(field)" :key="k" :class="genFieldContainerStyle(field)">
-        <BaseFormLabel
-          :tooltip="editable"
-          :class="genFieldLabelSytle(field)"
-          :field-model="field"
-        />
-        <div :class="genFieldContentSytle(field)">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
-          <FileUploader v-model="field.value" :dragable="!field.placerows || field.placerows > 1" :editable="editable && !field.readonly" :field-model="field" :form-id="formId" :form-name="formName" />
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
-        </div>
-      </div>
-      <!-- 动态下拉多选框场景 -->
-      <div v-else-if="field.comType === 'tableView'" v-show="checkFieldVisible(field)" :key="k" :class="genFieldContainerStyle(field)">
-        <BaseFormLabel
-          :tooltip="editable"
-          :class="genFieldLabelSytle(field)"
-          :field-model="field"
-        />
-        <div :class="genFieldContentSytle(field)">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
-          <DynamicMultipleCreator
-            v-if="field.listItemCreationFormClass"
-            v-model="field.value"
-            :form-id="formId"
-            :form-name="formName"
-            :editable="editable && !field.readonly"
-            :field-model="field"
-            :parent-field-models="parentFieldModelsConcat()"
-          />
-          <DynamicMultipleSelector
-            v-else
-            v-model="field.value"
-            :form-id="formId"
-            :form-name="formName"
-            :editable="editable && !field.readonly"
-            :field-model="field"
-            :parent-field-models="parentFieldModelsConcat()"
-          />
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
-        </div>
-      </div>
-      <!-- 动态下拉单选框场景 -->
-      <div v-else-if="field.comType === 'dynamicSelect'" v-show="checkFieldVisible(field)" :key="k" :class="genFieldContainerStyle(field)">
-        <BaseFormLabel :tooltip="editable" :class="genFieldLabelSytle(field)" :field-model="field" />
-        <div v-if="!editable || field.readonly" :class="genFieldContentSytle(field)">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
-          <TemplateConfig v-if="field.template" :template="field.template" :field-model="field" :form-data="defaultData" />
-          {{ getTextDisplay(field) }}
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
-        </div>
-        <div v-else :class="genFieldContentSytle(field)">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
-          <DynamicSingleSelector
-            v-model="field.value"
-            :form-id="formId"
-            :form-name="formName"
-            :field-model="field"
-            :parent-field-models="parentFieldModelsConcat()"
-          />
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
-        </div>
-      </div>
       <!-- 操作按钮 -->
-      <div v-else-if="field.comType === 'button'" v-show="checkFieldVisible(field)" :key="k" :class="genFieldContainerStyle(field)">
-        <div v-if="editable && !field.readonly && field.title" :class="genFieldContentSytle(field)">
-          <el-button :size="field.styleSize || 'mini'" :type="field.styleType || 'text'" @click="onFieldButtonClick(field)">
-            {{ field.title }}
-          </el-button>
-        </div>
+      <div v-else-if="field.comType === 'button'">
+        <el-button :size="field.styleSize || 'mini'" :type="field.styleType || 'text'" @click="onFieldButtonClick(field)">
+          {{ field.title }}
+        </el-button>
       </div>
       <!-- 常规短文本字段 -->
-      <div v-else v-show="checkFieldVisible(field)" :key="k" :class="genFieldContainerStyle(field)">
-        <BaseFormLabel :tooltip="editable" :class="genFieldLabelSytle(field)" :field-model="field" />
+      <div v-else>
         <TemplateConfig
           v-if="(!editable || field.readonly) && field.template"
-          :class="genFieldContentSytle(field)"
           :template="field.template"
           :field-model="field"
           :form-data="defaultData"
         />
-        <el-tooltip v-if="(!editable || field.readonly) && !field.template" effect="dark" :content="getTextDisplay(field)" placement="left-start">
-          <div :class="genFieldContentSytle(field)">
-            <!-- eslint-disable-next-line vue/no-v-html -->
-            <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
-            {{ getTextDisplay(field) }}
-            <!-- eslint-disable-next-line vue/no-v-html -->
-            <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
-          </div>
+        <el-tooltip
+          v-else-if="(!editable || field.readonly)"
+          effect="dark"
+          :content="getTextDisplay(field)"
+          placement="left-start"
+        >
+          <span>{{ getTextDisplay(field) }}</span>
         </el-tooltip>
-        <div v-if="editable && !field.readonly" :class="genFieldContentSytle(field)">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
-          <!-- 密码框 -->
-          <el-input
-            v-if="field.comType === 'password'"
-            v-model="field.value"
-            size="mini"
-            type="password"
-            :placeholder="'请输入' + field.title"
-            @input="$forceUpdate()"
-          />
-          <!-- 静态单选 -->
-          <el-select
-            v-else-if="field.comType === 'select'"
-            v-model="field.value"
-            size="mini"
-            :placeholder="'请选择' + field.title"
-            :clearable="true"
-            @change="$forceUpdate()"
-          >
-            <slot v-for="(opt,optidx) in field.staticOptions">
-              <div v-if="opt.group && (optidx >= 1 ? field.staticOptions[optidx - 1].group != opt.group : true)" :key="optidx + 1000" class="common-option-group">
-                {{ opt.optionGroup || opt.group }}
-              </div>
-              <el-option :key="optidx" :label="opt.display" :value="opt.value" />
-            </slot>
-          </el-select>
-          <!-- 静态多选 -->
-          <el-checkbox-group
-            v-else-if="field.comType === 'checkbox'"
-            v-model="field.value"
-            size="mini"
-            @change="$forceUpdate()"
-          >
-            <el-checkbox v-for="(opt, optidx) in field.staticOptions" :key="optidx" :label="opt.optionValue" :value="opt.optionValue">
-              {{ opt.optionDisplay }}
-            </el-checkbox>
-          </el-checkbox-group>
-          <!-- 开关选择 -->
-          <el-switch
-            v-else-if="field.comType === 'switch'"
-            v-model="field.value"
-            size="mini"
-            @change="$forceUpdate()"
-          />
-          <!-- 日期选择 -->
-          <el-date-picker
-            v-else-if="field.comType === 'DateOnly'"
-            v-model="field.value"
-            size="mini"
-            placeholder="请选择日期"
-            format="yyyy-MM-dd"
-            value-format="yyyy-MM-dd"
-            type="date"
-            @input="$forceUpdate()"
-          />
-          <!-- 日期和时间选择 -->
-          <el-date-picker
-            v-else-if="field.comType === 'DateTime'"
-            v-model="field.value"
-            size="mini"
-            placeholder="请选择日期"
-            format="yyyy-MM-dd HH:mm:ss"
-            value-format="yyyy-MM-dd HH:mm:ss"
-            type="datetime"
-            @input="$forceUpdate()"
-          />
-          <!-- 时间选择 -->
-          <el-time-picker
-            v-else-if="field.comType === 'TimeOnly'"
-            v-model="field.value"
-            size="mini"
-            placeholder="请选择时间"
-            format="HH:mm:ss"
-            value-format="HH:mm:ss"
-            @input="$forceUpdate()"
-          />
-          <!-- 简单文本框 -->
-          <el-input
-            v-else
-            v-model="field.value"
-            size="mini"
-            :placeholder="'请输入' + field.title"
-            :type="field.type === 'integer' ? 'number' : 'text'"
-            @input="$forceUpdate()"
-          />
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
-        </div>
+        <!-- 密码框 -->
+        <el-input
+          v-else-if="field.comType === 'password'"
+          v-model="field.value"
+          size="mini"
+          type="password"
+          :placeholder="'请输入' + field.title"
+          @input="$forceUpdate()"
+        />
+        <!-- 静态单选 -->
+        <el-select
+          v-else-if="field.comType === 'select'"
+          v-model="field.value"
+          size="mini"
+          :placeholder="'请选择' + field.title"
+          :clearable="true"
+          @change="$forceUpdate()"
+        >
+          <slot v-for="(opt,optidx) in field.staticOptions">
+            <div v-if="opt.group && (optidx >= 1 ? field.staticOptions[optidx - 1].group != opt.group : true)" :key="optidx + 1000" class="common-option-group">
+              {{ opt.optionGroup || opt.group }}
+            </div>
+            <el-option :key="optidx" :label="opt.display" :value="opt.value" />
+          </slot>
+        </el-select>
+        <!-- 静态多选 -->
+        <el-checkbox-group
+          v-else-if="field.comType === 'checkbox'"
+          v-model="field.value"
+          size="mini"
+          @change="$forceUpdate()"
+        >
+          <el-checkbox v-for="(opt, optidx) in field.staticOptions" :key="optidx" :label="opt.optionValue" :value="opt.optionValue">
+            {{ opt.optionDisplay }}
+          </el-checkbox>
+        </el-checkbox-group>
+        <!-- 开关选择 -->
+        <el-switch
+          v-else-if="field.comType === 'switch'"
+          v-model="field.value"
+          size="mini"
+          @change="$forceUpdate()"
+        />
+        <!-- 日期选择 -->
+        <el-date-picker
+          v-else-if="field.comType === 'DateOnly'"
+          v-model="field.value"
+          size="mini"
+          placeholder="请选择日期"
+          format="yyyy-MM-dd"
+          value-format="yyyy-MM-dd"
+          type="date"
+          @input="$forceUpdate()"
+        />
+        <!-- 日期和时间选择 -->
+        <el-date-picker
+          v-else-if="field.comType === 'DateTime'"
+          v-model="field.value"
+          size="mini"
+          placeholder="请选择日期"
+          format="yyyy-MM-dd HH:mm:ss"
+          value-format="yyyy-MM-dd HH:mm:ss"
+          type="datetime"
+          @input="$forceUpdate()"
+        />
+        <!-- 时间选择 -->
+        <el-time-picker
+          v-else-if="field.comType === 'TimeOnly'"
+          v-model="field.value"
+          size="mini"
+          placeholder="请选择时间"
+          format="HH:mm:ss"
+          value-format="HH:mm:ss"
+          @input="$forceUpdate()"
+        />
+        <!-- 简单文本框 -->
+        <el-input
+          v-else
+          v-model="field.value"
+          size="mini"
+          :placeholder="'请输入' + field.title"
+          :type="field.type === 'integer' ? 'number' : 'text'"
+          @input="$forceUpdate()"
+        />
       </div>
-    </slot>
-  </div>
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
+    </template>
+    <template v-slot:after>
+      <div v-if="actions && actions.length > 0" class="form-content-buttons">
+        <el-button v-for="(item, index) in actions" :key="`form-action-${index}`" :type="item.type || 'primary'" :size="item.size || 'mini'" @click="$emit('actions', item)">
+          {{ item.name || item.title || item.dispaly }}
+        </el-button>
+      </div>
+    </template>
+  </BaseFormContentBase>
 </template>
 <script>
 import tool from '@/utils/tools'
@@ -254,7 +225,7 @@ import TemplateConfig from '@/components/BaseFormItem/TemplateConfig'
 import DynamicSingleSelector from '@/components/BaseFormItem/DynamicSingleSelector'
 import DynamicMultipleCreator from '@/components/BaseFormItem/DynamicMultipleCreator'
 import DynamicMultipleSelector from '@/components/BaseFormItem/DynamicMultipleSelector'
-import { getFieldValueDisplay, getVisibleFieldModels, getFieldPlacement, FORM_FIELD_OPTIONS } from '@/utils/formUtils'
+import { getFieldValueDisplay, getVisibleFieldModels, FORM_FIELD_OPTIONS } from '@/utils/formUtils'
 export default {
   name: 'BaseFormContent',
   components: {
@@ -263,7 +234,8 @@ export default {
     TemplateConfig,
     DynamicSingleSelector,
     DynamicMultipleCreator,
-    DynamicMultipleSelector
+    DynamicMultipleSelector,
+    BaseFormContentBase: () => import('./base')
   },
   props: {
     /**
@@ -318,9 +290,9 @@ export default {
       default: null
     },
     /**
-     * 是否只展示第一行
+     * 是否可折叠
      */
-    showOnlyFirstLine: {
+    collapsible: {
       type: Boolean,
       default: false
     },
@@ -330,35 +302,44 @@ export default {
     innerEditable: {
       type: Boolean,
       default: false
-    }
-  },
-  data() {
-    return {
-      fieldModels: [],
-      fieldBeforeCells: 0
-    }
-  },
-  watch: {
-    formModel: {
-      immediate: true,
-      handler(formModel) {
-        if (!formModel) {
-          return
-        }
-        // console.log('基础编辑表单模型更新，模型和数据如下:', formModel, this.defaultData)
-        this.fieldModels = getVisibleFieldModels(formModel, this.defaultData, FORM_FIELD_OPTIONS.HiddenIfAllEmpty | FORM_FIELD_OPTIONS.SeparatorIncluded)
-      }
     },
-    defaultData: {
-      immediate: true,
-      handler(defaultData) {
-        // console.log('基础编辑表单数据更新，模型和数据如下:', this.formModel, defaultData)
-        this.fieldModels = getVisibleFieldModels(this.formModel, defaultData, FORM_FIELD_OPTIONS.HiddenIfAllEmpty | FORM_FIELD_OPTIONS.SeparatorIncluded)
+    /**
+     * 是否可折叠内嵌表单
+     */
+    innerCollapsible: {
+      type: Boolean,
+      default: false
+    },
+    /**
+     * 自定义的操作按钮
+     */
+    actions: {
+      type: Array,
+      default: null
+    }
+  },
+  computed: {
+    fieldModels() {
+      if (!this.formModel) {
+        return []
       }
+      return this.getVisibleFieldModels(this.formModel, this.defaultData)
     }
   },
   methods: {
     /**
+     * 解析可显示的字段模型清单
+     */
+    getVisibleFieldModels(formModel, formData) {
+      var options = FORM_FIELD_OPTIONS.SeparatorIncluded |
+                     FORM_FIELD_OPTIONS.HiddenIfAllEmpty |
+                     FORM_FIELD_OPTIONS.OrderUndefinedExcluded
+      if (this.showAll === true) {
+        options = FORM_FIELD_OPTIONS.All
+      }
+      return getVisibleFieldModels(formModel, formData, options)
+    },
+    /*
      * 获取字段的只读文本显示
      * @param {Object} fieldModel
      */
@@ -368,6 +349,7 @@ export default {
       }
       return '' + getFieldValueDisplay(fieldModel, fieldModel.value)
     },
+
     /**
      * 获取表单的验证内容
      */
@@ -421,22 +403,6 @@ export default {
       return validPassed ? data : null
     },
     /**
-     * 计算当前字段是否超过一行
-     */
-    checkFieldVisible(field) {
-      if (!this.showOnlyFirstLine) {
-        return true
-      }
-      var beforeCells = 0
-      for (const before of this.fieldModels) {
-        beforeCells += getFieldPlacement(before)
-        if (field.key === before.key) {
-          break
-        }
-      }
-      return beforeCells <= 12
-    },
-    /**
      * 整合级联产生的父表单模型
      */
     parentFieldModelsConcat() {
@@ -450,162 +416,31 @@ export default {
       return concated
     },
     /**
-     * 计算字段容器的样式
-     * @param {Object} field
-     */
-    genFieldContainerStyle(field) {
-      var clazz = 'column-style-span column-style-span' +
-        getFieldPlacement(field)
-      if (!this.editable || field.readonly) {
-        clazz += ' column-style-readonly'
-      }
-      return clazz
-    },
-    /**
-     * 计算字段标题的样式
-     */
-    genFieldLabelSytle(field) {
-      var clazz = 'column-style-title'
-      if (field.required) {
-        clazz += ' column-style-required'
-      }
-      if (field.smallTitle) {
-        clazz += ' column-small-title'
-      }
-      return clazz
-    },
-    /**
-     * 计算字段内容的样式
-     */
-    genFieldContentSytle(field) {
-      var clazz = 'column-style-content'
-      if (field.smallTitle || field.comType === 'button') {
-        clazz += ' column-small-title'
-      }
-      if (field.comType === 'areaText') {
-        clazz += ' column-longtext-content'
-      }
-      return clazz
-    },
-
-    /**
      * 自定义按钮点击回调
      */
     onFieldButtonClick(field) {
+      // console.log('表单按钮点击事件：', field)
       this.$emit('button', field, this)
-      var parent = this
       var fields = [{
         field: field,
         form: this
       }]
-      while (parent && parent.parentField && parent.parentField.comType === 'innerForm') {
-        fields.push({ field: parent.parentField, form: parent.$parent })
-        parent.$parent.$emit('button', fields, parent.$parent)
-        parent = parent.$parent
+      var $this = this
+      while ($this.parentField && $this.parentField.comType === 'innerForm') {
+        fields.push({ field: $this.parentField, form: $this.$parent })
+        // console.log('表单按钮点击事件：', fields, $this.$parent)
+        $this.$parent.$emit('button', fields, $this.$parent)
+        $this = $this.$parent
       }
     }
   }
 }
 </script>
 <style lang="scss">
-.form-content-block {
-  background-color: #fff;
-  color: #222;
-  font-size: 12px;
-  padding: 0px;
-  .column-style-span {
-    display: inline-block;
-    vertical-align: top;
-    margin-bottom: 15px;
-  }
-  .column-style-readonly {
-    margin-bottom: 25px;
-    .el-tooltip.column-style-content {
-      white-space: nowrap;
-      text-overflow: ellipsis !important;
-    }
-  }
-  .column-style-span1 {
-    width: calc(8.25% - 0px);
-  }
-  .column-style-span2 {
-    width: calc(16.5% - 0px);
-  }
-  .column-style-span3 {
-    width: calc(24.75% - 0px);
-  }
-  .column-style-span4 {
-    width: calc(33% - 0px);
-  }
-  .column-style-span5 {
-    width: calc(41.25% - 0px);
-  }
-  .column-style-span6 {
-    width: calc(49.5% - 0px);
-  }
-  .column-style-span7 {
-    width: calc(57.75% - 0px);
-  }
-  .column-style-span8 {
-    width: calc(66% - 0px);
-  }
-  .column-style-span9 {
-    width: calc(74.25% - 0px);
-  }
-  .column-style-span10 {
-    width: calc(82.5% - 0px);
-  }
-  .column-style-span11 {
-    width: calc(90.75% - 0px);
-  }
-  .column-style-span12 {
-    width: calc(99% - 0px);
-  }
-  .column-style-title {
-    color: #606266;
-    width: 120px;
-    display: inline-block;
-    white-space: nowrap;
-    // font-weight: bold;
-    text-align: right;
-    padding-right: 5px;
-    overflow: hidden;
-    text-overflow: ellipsis !important;
-  }
-  .column-style-title.column-small-title {
+.form-content-wrapper {
+  .form-content-buttons {
+    padding: 5px 50px;
     text-align: center;
-    width: 40px !important;
-  }
-  .column-style-content {
-    overflow: hidden;
-    display: inline-block;
-    width: calc(100% - 125px);
-    vertical-align: top;
-    .el-input,
-    .el-select,
-    .el-range-editor--mini.el-input__inner {
-      width: 100% !important;
-    }
-    .el-button {
-      margin: 0 !important;
-      padding: 5px !important;
-    }
-  }
-  .column-style-content.column-small-title {
-    width: calc(100% - 45px) !important;
-  }
-  .column-longtext-content {
-    overflow: auto;
-    pre {
-      margin:0px;
-      padding:0px;
-    }
-  }
-  .column-style-required {
-    color: orangered;
-  }
-  .el-divider {
-    margin: 10px 0 25px 0 !important;
   }
 }
 </style>

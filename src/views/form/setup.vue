@@ -6,6 +6,7 @@
         :key="'form-extras-selector'"
         v-model="formExtraViewAttrs.currentFormClass"
         placeholder="请选择界面模型"
+        :filterable="true"
         @change="loadExtraViewAttributes"
       >
         <el-option
@@ -302,30 +303,20 @@ export default {
      * 加载界面模型数据
      */
     loadExtraViewAttributes(formViewKey) {
-      // console.log(formViewKey)
-      // if (formViewKey && formViewKey.value) {
-      //   formViewKey = formViewKey.value
-      // }
       this.formExtraViewAttrs.currentFormClass = formViewKey
-      // console.log('"' + tool.trim(tool.stringify(formViewKey)) + '"')
       if (tool.isBlank(formViewKey)) {
         return
       }
       var formViewInfo = this.formAllViewNames[formViewKey]
       this.formExtraViewAttrs['currentFormModel'] = null
       this.formApi.loadViewDefinition(formViewKey).then((formViewData) => {
-        this.formApi.loadViewAttributes(formViewKey).then(customs => {
-          var formModel = {
-            path: formViewKey,
-            form: this.formName,
-            types: formViewInfo.types,
-            names: formViewInfo.names,
-            fields: this.mergeViewAttributes(formViewData, customs)
-          }
-          this.formExtraViewAttrs['currentFormModel'] = formModel
-        }).catch((e) => {
-          this.$notify.error('加载表单界面模型自定义数据失败：' + formViewKey)
-        })
+        this.formExtraViewAttrs['currentFormModel'] = {
+          path: formViewKey,
+          form: this.formName,
+          types: formViewInfo.types,
+          names: formViewInfo.names,
+          formModel: formViewData
+        }
       }).catch((e) => {
         this.$notify.error('加载表单界面模型原始数据失败：' + formViewKey)
       })
@@ -343,6 +334,8 @@ export default {
       }
       for (var key in result) {
         result[key] = Object.assign(result[key], {
+          custom: result[key].custom,
+          modifiable: result[key].modifiable,
           title: result[key].title || '',
           position: result[key].position || '',
           description: result[key].description || '',
@@ -381,6 +374,7 @@ export default {
               result[customs[i].field]
             )
             innerField = result[customs[i].field]
+            Object.assign(innerField, { modifiable: true, custom: true })
           }
           Object.assign(innerField, {
             'title': tool.ifBlank(customs[i].title, innerField.title || ''),

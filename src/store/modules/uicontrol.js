@@ -1,4 +1,3 @@
-import router from '@/router/index.js'
 const state = {
   isFold: true,
   sidebars: [],
@@ -61,7 +60,6 @@ const mutations = {
     state.currentMenu = {}
   },
   setCurrentMenu(state, e) {
-    router.push({ path: e.obj.path })
     state.currentMenu = e
   }
 }

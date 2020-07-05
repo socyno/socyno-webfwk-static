@@ -58,7 +58,7 @@ export default {
       const ele = document.getElementById('src-addr-input')
       ele.select()
       document.execCommand('copy')
-      this.$message.success('复制成功')
+      this.$notify.success('复制成功')
     },
     handlePath() {
 

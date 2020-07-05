@@ -58,10 +58,10 @@ export default {
      */
     trigger(formName, formAction, formId, formData, actionParams) {
       this.editable = true
+      this.formData = null
       this.formId = formId
       this.formName = formName
       this.formApi = new FormApi(formName)
-      this.formData = tool.jsonCopy(formData || {})
       this.formAction = tool.jsonCopy(formAction)
       this.formModel = this.formAction.formClass
       /**
@@ -95,12 +95,14 @@ export default {
       if (this.formAction.prepareRequired) {
         var loading = Loading.service({ fullscreen: true })
         this.formApi.loadActionPrepareData(this.formId, this.formAction.name, actionParams).then(data => {
-          Object.assign(this.formData, data || {})
+          this.formData = Object.assign(tool.jsonCopy(formData || {}), data || {})
+          // console.log('事件的 prepare 数据 => ', data, this.formData)
           this.$emit('prepare', data, this.formName, this.formId, this.formAction, this.formData)
         }).finally(res => {
           loading.close()
         })
       } else {
+        this.formData = Object.assign(tool.jsonCopy(formData || {}))
         this.$emit('prepare', null, this.formName, this.formId, this.formAction, this.formData)
       }
     },
@@ -142,12 +144,12 @@ export default {
           if (tool.toUpper(this.formAction.eventFormType) === 'DELETE') {
             this.$emit('delete', data, this.formName, this.formId, this.formAction)
           } else if (tool.toUpper(this.formAction.eventFormType) === 'CREATE') {
-            this.formId = tool.isNumber(data) ? data : data.id
+            this.formId = tool.looksLikeInteger(data) ? data : data.id
             this.$emit('create', data, this.formName, this.formId, this.formAction)
           } else {
             this.$emit('change', data, this.formName, this.formId, this.formAction)
           }
-          console.log('事件执行完成：', this.formName, '/', this.formId, ':', this.formAction)
+          // console.log('事件执行完成：', data, this.formName, '/', this.formId, ':', this.formAction)
         })
         if (!data || tool.isBlank(eventResultType) || eventResultType === 'messageview') {
           return

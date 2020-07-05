@@ -36,12 +36,14 @@
       :append-to-body="true"
     >
       <BaseFormDetail
+        ref="formDetail"
         :form-top="60"
         :form-id="rowDetailDrawer.formId || ''"
         :form-name="formName"
+        :enable-auto-load="false"
         @back="rowDetailDrawer.visible = false"
+        @loaded="onRowFormLoaded"
         @delete="onRowFormDeleted"
-        @change="onRowFormChanged"
       />
     </el-drawer>
 
@@ -170,7 +172,7 @@ export default {
       this.currentFieldModels = {}
       this.formName = this.$route.params.formName
       this.formApi = new FormApi(this.formName)
-      this.initAction = this.$route.query ? this.$route.query._action : ''
+      this.initAction = this.$route.query ? (tool.stringify(this.$route.query._action)) : ''
       this.resetPageData()
     },
 
@@ -216,7 +218,7 @@ export default {
      * 查询触发的回调
      */
     onQueryApply(params) {
-      console.log('查询的参数数据如下：', params)
+      // console.log('查询的参数数据如下：', params)
       this.filterParams = params
       this.initListData()
     },
@@ -227,7 +229,7 @@ export default {
       if (!changedQuery) {
         return
       }
-      console.log('切换查询如下：', changedQuery)
+      // console.log('切换查询如下：', changedQuery)
       this.filterParams = {}
       this.currentQuery = changedQuery
       this.currentFieldModels = getVisibleFieldModels(changedQuery.resultClass)
@@ -358,27 +360,32 @@ export default {
     showFormDetail(formId) {
       this.rowDetailDrawer.visible = true
       this.rowDetailDrawer.formId = formId
+      this.$nextTick(function() {
+        this.$refs.formDetail.load()
+      })
     },
 
     /**
-     * 表单内容更新回调
+     * 表单详情的数据加载或更新后的回调
      */
-    onRowFormChanged(resData, formName, formId, formAction) {
-      /* 更新结果集中的当前数据 */
-      this.formApi.loadNamedQueryFormData(this.currentQuery.name, formId).then((data) => {
-        var newTableData = []
-        var length = this.currentTableData.length
-        for (var r = length - 1; r >= 0; r--) {
-          if (this.currentTableData[r].id === data.id) {
-            // console.log('替换当前列表中的数据项：', r, ' => ', data)
-            // 防止单数据中存在重复项时，引发展开和收起的功能同时生效
-            newTableData[r] = tool.jsonCopy(data)
-          } else {
-            newTableData[r] = this.currentTableData[r]
-          }
+    onRowFormLoaded(formData, formName, formId) {
+      var newTableData = []
+      var hasDataReplaced = false
+      var length = this.currentTableData.length
+      for (var r = length - 1; r >= 0; r--) {
+        if (this.currentTableData[r].id === formData.id) {
+          hasDataReplaced = true
+          // console.log('替换当前列表中的数据项：', r, ' => ', formData)
+          // 防止单数据中存在重复项时，引发展开和收起的功能同时生效
+          newTableData[r] = tool.jsonCopy(formData)
+        } else {
+          newTableData[r] = this.currentTableData[r]
         }
-        this.currentTableData = newTableData
-      })
+      }
+      if (!hasDataReplaced) {
+        newTableData.splice(0, 0, formData)
+      }
+      this.currentTableData = newTableData
     },
 
     /**
@@ -416,17 +423,7 @@ export default {
      */
     onRowCreatorCommit(resData, formName, formId, formAction) {
       this.rowCreateDrawer.visible = false
-      /* 立即展示新创建表单详情 */
       this.showFormDetail(formId)
-      /* 并添加已创建的记录到列表的前面 */
-      this.formApi.loadNamedQueryFormData(this.currentQuery.name, formId).then((data) => {
-        // console.log('替换当前列表中的数据项：', data, this.currentTableData)
-        var newTableData = [data]
-        for (var item of this.currentTableData) {
-          newTableData.push(item)
-        }
-        this.currentTableData = newTableData
-      })
     }
   }
 }

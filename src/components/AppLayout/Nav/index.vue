@@ -135,7 +135,7 @@
                     正使用代理模式登录
                   </strong>
                   <br>
-                  代理人:{{ $store.state.user.info.proxyDisplay }}
+                  代理人姓名:{{ $store.state.user.info.proxyDisplay }}
                 </div>
                 <div v-if="$store.state.user.info.proxyDisplay" class="role">
                   代理人账号:{{ $store.state.user.info.proxyUsername }}

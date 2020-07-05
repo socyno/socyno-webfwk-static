@@ -35,6 +35,17 @@ const tool = {
   },
 
   /**
+   * 检查页面是否嵌套在 IFRAME 中
+   */
+  inIframe() {
+    try {
+      return window.self !== window.top
+    } catch (e) {
+      return true
+    }
+  },
+
+  /**
    * 设置地址栏的HASH
    * @param {Object} params
    */

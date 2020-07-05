@@ -85,34 +85,21 @@ export default {
     }
   },
   watch: {
-    formName: {
-      handler(formName) {
-        this.formApi = null
-        if (formName) {
-          this.fromIndex = 0
-          this.formApi = new FormApi(formName)
-          this.loadFormLogs(true)
-        }
-      }
-    },
-    formId: {
-      handler(formId) {
-        this.fromIndex = 0
-        this.loadFormLogs(true)
-      }
-    },
     fromIndex: {
       handler(fromIndex) {
         this.loadFormLogs()
       }
     }
   },
-  mounted() {
-    // console.log(`表单日志页面加载完成: form = ${this.formName}, fromId = ${this.formId}, fromIndex = ${this.fromIndex}`)
-    this.formApi = new FormApi(this.formName)
-    this.loadFormLogs()
-  },
   methods: {
+    /**
+     * 初始化操作日志数据
+     */
+    load() {
+      this.fromIndex = 0
+      this.loadFormLogs()
+    },
+
     /**
      * 设置标题
      */
@@ -123,13 +110,13 @@ export default {
     /**
      * 加载操作日志数据
      */
-    loadFormLogs(noMoreHidden) {
+    loadFormLogs() {
       this.loading = true
       this.setFormTitle()
-      this.formApi.loadFormActionLogs(this.formId, this.fromIndex).then(data => {
+      new FormApi(this.formName).loadFormActionLogs(this.formId, this.fromIndex).then(data => {
         if (!data || data.length < 1) {
           this.logsPager.nomore = true
-          if (noMoreHidden !== true && this.fromIndex > 0) {
+          if (this.fromIndex > 0) {
             this.$message.info('没有更多数据')
           }
           return
@@ -149,6 +136,7 @@ export default {
         this.loading = false
       })
     },
+
     /**
      * 加载操作日志变更详情
      */
@@ -159,7 +147,7 @@ export default {
         text: '请求中…',
         background: 'rgba(0, 0, 0, 0.1)'
       })
-      this.formApi.loadFormActionLogDetail(this.formId, detailId).then(data => {
+      new FormApi(this.formName).loadFormActionLogDetail(this.formId, detailId).then(data => {
         const target = document.getElementById('formActionLogDetailContent')
         target.innerHTML = ''
         CodeMirror.MergeView(target, {
@@ -176,6 +164,7 @@ export default {
         loading.close()
       })
     },
+
     /**
      * 翻页方向（prev 向前，next 向后，first 首页）
      * @param {String} direction prev / next /first

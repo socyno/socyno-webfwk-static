@@ -33,7 +33,7 @@ export default {
       var params = this.form
       params.username = this.$store.state.user.info.username
       svpPwdReset(this.form).then(res => {
-        this.$message.success('重置成功')
+        this.$notify.success('重置成功')
         this.loading = false
       }).catch(res => {
         this.loading = false

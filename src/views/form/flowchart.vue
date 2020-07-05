@@ -1,16 +1,15 @@
 <template>
   <div>
     <el-button type="primary" style="position: absolute; top: 10px; left: 10px; z-index: 999; width: 250px; height: 80px" @click="toggleFlowChartType">
-      {{ type === 'unchanged' ? '隐藏无状态扭转的事件' : '显示所有事件' }}
+      {{ type === 'unchanged' ? '隐藏无状态流转的事件' : '显示所有事件' }}
     </el-button>
-    <div id="form-flow-chart-canvas" />
+    <div id="form-flow-chart-canvas" style="background-color: #ECA;" />
   </div>
 </template>
 <script>
 import go from 'gojs'
 import tool from '@/utils/tools'
 import FormApi from '@/apis/formApi'
-// eslint-disable-next-line no-unused-vars
 const MAKE = go.GraphObject.make
 export default {
   data() {
@@ -39,17 +38,19 @@ export default {
     },
 
     initializeFlowChart() {
-      const yellowGrad = MAKE(go.Brush, 'Linear', { 0: 'rgb(254, 201, 0)', 1: 'rgb(254, 162, 0)' })
       const blueGrad = MAKE(go.Brush, 'Linear', { 0: '#b0e0e6', 1: '#87CEEB' })
       const greenGrad = MAKE(go.Brush, 'Linear', { 0: '#4ACA6D', 1: '#4ACA6D' })
-      const bigFont = 'bold 13pt Helvetica, Arial, sans-serif'
 
       this.myDiagram =
         MAKE(go.Diagram, 'form-flow-chart-canvas',
           {
             // have mouse wheel events zoom in and out instead of scroll up and down
             'toolManager.mouseWheelBehavior': go.ToolManager.WheelZoom,
+            initialContentAlignment: go.Spot.Center,
             initialAutoScale: go.Diagram.Uniform,
+            contentAlignment: go.Spot.Center, // 对齐方式
+            'toolManager.hoverDelay': 100, // tooltip提示显示延时
+            'toolManager.toolTipDuration': 100000, // tooltip持续显示时间
             'isReadOnly': true, // 只读
             'grid.visible': true, // 显示网格
             'linkingTool.direction': go.LinkingTool.ForwardsOnly,
@@ -57,20 +58,16 @@ export default {
           })
 
       this.myDiagram.nodeTemplate =
-        MAKE(go.Node, 'Auto', this.nodeStyle(),
-          MAKE(go.Shape, 'Rectangle',
-            {
-              fill: yellowGrad, stroke: 'black',
-              portId: '', fromLinkable: true, toLinkable: true, cursor: 'pointer',
-              toEndSegmentLength: 50, fromEndSegmentLength: 40
-            }),
-          MAKE(go.TextBlock, 'Event',
-            {
-              margin: 6,
-              font: bigFont,
-              editable: true
-            },
-            new go.Binding('text', 'text').makeTwoWay()))
+        MAKE(go.Node,
+          new go.Binding('location', 'loc', go.Point.parse),
+          MAKE(go.Shape, 'RoundedRectangle', { fill: '#ffca44', stroke: 'green', strokeWidth: 2, height: 30 }),
+          'Auto',
+          MAKE(go.Panel, 'Horizontal', { padding: 5 },
+            MAKE(go.Panel, 'Vertical',
+              MAKE(go.TextBlock, 'Event', { margin: 7, stroke: 'black', font: '14px sans-serif' }, new go.Binding('text', 'text')),
+            )
+          )
+        )
 
       this.myDiagram.linkTemplate =
         MAKE(go.Link,
@@ -78,21 +75,9 @@ export default {
           { curve: go.Link.Bezier, toShortLength: 15 },
           new go.Binding('curviness', 'curviness'),
           MAKE(go.Shape,
-            { stroke: '#2F4F4F', strokeWidth: 2.5 }),
+            { stroke: '#2F4F4F', strokeWidth: 1.0 }),
           MAKE(go.Shape,
-            { toArrow: 'kite', fill: '#2F4F4F', stroke: null, scale: 2 }),
-          MAKE(go.TextBlock,
-            {
-              stroke: 'blue',
-              font: '16px sans-serif'
-            },
-            new go.Binding('text', 'linkText')),
-          {
-            toolTip: MAKE(go.Adornment, 'Auto',
-              MAKE(go.Shape, { fill: '#FFFFCC' }),
-              MAKE(go.TextBlock, { margin: 4 }, new go.Binding('text', 'text'))
-            )
-          }
+            { toArrow: 'kite', fill: '#4f2f2f', stroke: null, scale: 1.5 })
         )
 
       this.myDiagram.nodeTemplateMap.add('STATE',
@@ -111,6 +96,58 @@ export default {
             { fill: greenGrad, portId: '', toLinkable: true, toEndSegmentLength: 50 }),
           MAKE(go.TextBlock, 'Success!', this.stateStyle(),
             new go.Binding('text', 'text').makeTwoWay())
+        ))
+
+      this.myDiagram.linkTemplateMap.add('LINK_CURRENT',
+        MAKE(go.Link,
+          new go.Binding('points').makeTwoWay(),
+          { curve: go.Link.Bezier, toShortLength: 15 },
+          new go.Binding('curviness', 'curviness'),
+          MAKE(go.Shape,
+            { stroke: 'green', strokeWidth: 3.5 }),
+          MAKE(go.Shape,
+            { toArrow: 'kite', fill: 'green', stroke: null, scale: 2.5 }),
+        ))
+
+      this.myDiagram.nodeTemplateMap.add('NEXT_ACTION',
+        MAKE(go.Node,
+          new go.Binding('location', 'loc', go.Point.parse),
+          MAKE(go.Shape, 'RoundedRectangle', { fill: '#ffca44', stroke: 'green', strokeWidth: 2, height: 30 }),
+          'Auto',
+          MAKE(go.Panel, 'Horizontal', { padding: 5 },
+            MAKE(go.Panel, 'Vertical',
+              MAKE(go.Picture, {
+                source: require('../../assets/male.png'), column: 1,
+                margin: 5, width: 20, height: 20
+              })),
+            MAKE(go.Panel, 'Vertical',
+              MAKE(go.TextBlock, 'Event', { margin: 7, stroke: 'black', font: '14px sans-serif' }, new go.Binding('text', 'text')),
+            ),
+          ),
+          {
+            toolTip: MAKE(go.Adornment, 'Spot',
+              MAKE(go.TextBlock,
+                {
+                  wrap: go.TextBlock.WrapFit,
+                  stroke: '#127edc',
+                  font: 'bold 16px sans-serif',
+                  margin: 5
+                },
+                new go.Binding('text', '',
+                  function(d) {
+                    const arr = d.currentApprovalPeopleList
+                    if (tool.isUndefOrNull(arr) || arr.length <= 0) {
+                      return '当前处理人不存在或未分配!'
+                    }
+                    let str = ''
+                    arr.forEach(function(item) {
+                      str += item + '\n'
+                    })
+                    return str
+                  })
+              )
+            )
+          }
         ))
 
       this.myDiagram.nodeTemplateMap.add('UNCHANGED',
@@ -180,7 +217,6 @@ export default {
         }
       ]
     }
-
   }
 }
 </script>

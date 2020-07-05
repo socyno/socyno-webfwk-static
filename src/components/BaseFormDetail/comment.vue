@@ -39,7 +39,6 @@ export default {
   data() {
     return {
       loading: false,
-      formApi: null,
       fromIndex: 0,
       formLogsData: null,
       logsPager: {
@@ -51,43 +50,30 @@ export default {
     }
   },
   watch: {
-    formName: {
-      handler(formName) {
-        this.formApi = null
-        if (formName) {
-          this.fromIndex = 0
-          this.formApi = new FormApi(formName)
-          this.loadFormLogs(true)
-        }
-      }
-    },
-    formId: {
-      handler(formId) {
-        this.fromIndex = 0
-        this.loadFormLogs(true)
-      }
-    },
     fromIndex: {
       handler(fromIndex) {
         this.loadFormLogs()
       }
     }
   },
-  mounted() {
-    // console.log(`表单注释加载完成: form = ${this.formName}, fromId = ${this.formId}, fromIndex = ${this.fromIndex}`)
-    this.formApi = new FormApi(this.formName)
-    this.loadFormLogs()
-  },
   methods: {
+    /**
+     * 重置讨论列表
+     */
+    load() {
+      this.fromIndex = 0
+      this.loadFormLogs()
+    },
+
     /**
      * 加载操作日志数据
      */
-    loadFormLogs(noMoreHidden) {
+    loadFormLogs() {
       this.loading = true
-      this.formApi.loadComments(this.formId, this.fromIndex).then(data => {
+      new FormApi(this.formName).loadComments(this.formId, this.fromIndex).then(data => {
         if (!data || data.length < 1) {
           this.logsPager.nomore = true
-          if (noMoreHidden !== true && this.fromIndex > 0) {
+          if (this.fromIndex > 0) {
             this.$message.info('没有更多数据')
           }
           return

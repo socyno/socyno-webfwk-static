@@ -67,7 +67,14 @@ export default {
     }
   },
   mounted() {
-    this.loadData(true)
+    this.loadData()
+    var that = this
+    window.addEventListener('message', function(event) {
+      if (event.data === 'close-approval-frame') {
+        that.dialogVisible = false
+        that.loadData()
+      }
+    }, false)
   },
   methods: {
     iframeLoaded() {
@@ -85,7 +92,7 @@ export default {
       }
       this.loadData()
     },
-    loadData(isInit) {
+    loadData() {
       this.loading = true
       if (this.selectedTab === 'applied') {
         getTodoListCreated(this.page).then(res => {

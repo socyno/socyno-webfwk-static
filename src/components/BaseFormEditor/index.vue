@@ -3,6 +3,7 @@
     <BaseFormContent
       ref="editForm"
       :editable="true"
+      :collapsible="collapsible"
       :form-id="formId"
       :form-name="formName"
       :form-model="formModel"
@@ -42,19 +43,15 @@ export default {
       type: String,
       default: null
     },
+    collapsible: {
+      type: Boolean,
+      default: false
+    },
     parentFieldModels: {
       type: Array,
       default: null
     }
   },
-  // watch: {
-  //   parentFieldModels: {
-  //     immediate: true,
-  //     handler(newValue) {
-  //       console.log('表单编辑组件结构的父表单数据模型：', newValue)
-  //     }
-  //   }
-  // },
   methods: {
     onSubmit() {
       var params

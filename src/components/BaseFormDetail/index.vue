@@ -14,7 +14,11 @@
         :form-model="formModel"
         :default-data="formData"
       />
-      <Comments :form-name="formName" :form-id="formId" />
+      <Comments
+        ref="formComments"
+        :form-name="formName"
+        :form-id="formId"
+      />
     </div>
     <div v-if="formActions" class="form-detail-btnpane">
       <el-button
@@ -27,6 +31,9 @@
       </el-button>
       <el-button type="info" @click="showChangeLogs()">
         变更日志
+      </el-button>
+      <el-button type="info" @click="load()">
+        刷新页面
       </el-button>
     </div>
     <el-drawer
@@ -42,7 +49,12 @@
       @open="onActionDrawerOpen"
     >
       <div v-if="actionDrawer.showChangeLogs">
-        <Logs :form-name="formName" :form-id="formId" @back="onActionFormCancel" />
+        <Logs
+          ref="formLogs"
+          :form-name="formName"
+          :form-id="formId"
+          @back="onActionFormCancel"
+        />
       </div>
       <BaseFormAction
         v-else
@@ -84,6 +96,14 @@ export default {
     formTop: {
       type: [Number],
       default: 0
+    },
+    /**
+     * 是否自动加载数据。
+     * 如果启用该功能，在任何事件完成后也会自动刷新数据。
+     */
+    enableAutoLoad: {
+      type: Boolean,
+      default: true
     }
   },
   data() {
@@ -95,8 +115,21 @@ export default {
       actionDrawer: null
     }
   },
+  watch: {
+    formId: {
+      handler() {
+        if (this.formId && this.enableAutoLoad) {
+          this.load()
+        }
+      }
+    }
+  },
   created() {
-    this.load()
+    if (this.enableAutoLoad) {
+      this.load()
+    } else {
+      this.resetAllData()
+    }
   },
   methods: {
     /**
@@ -125,7 +158,10 @@ export default {
         this.formModel = data.formClass
         this.formActions = data.actions
         this.setFormTitle()
-        this.$emit('loaded', data, this.formName, this.formId)
+        this.$nextTick(function() {
+          this.$refs.formComments.load()
+        })
+        this.$emit('loaded', data.form, this.formName, this.formId)
       })
     },
 
@@ -177,7 +213,6 @@ export default {
     onFormCommit(resData, formName, formId, formAction) {
       this.actionDrawer.visible = false
       this.load()
-      this.$emit('change', formName, formId, formAction)
     },
 
     /**
@@ -211,6 +246,9 @@ export default {
     showChangeLogs() {
       this.actionDrawer.visible = true
       this.actionDrawer.showChangeLogs = true
+      this.$nextTick(function() {
+        this.$refs.formLogs.load()
+      })
     },
 
     /**

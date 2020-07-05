@@ -111,14 +111,22 @@ export default {
   },
   methods: {
     handleExpandAll() {
+      var sysTable
+      if (!(sysTable = this.$refs['sys-table'])) {
+        return
+      }
       for (const key in this.productline) {
-        this.$refs['sys-table'].toggleRowExpansion(this.productline[key], true)
+        sysTable.toggleRowExpansion(this.productline[key], true)
       }
       this.expandAll = true
     },
     handleCloseAll() {
+      var sysTable
+      if (!(sysTable = this.$refs['sys-table'])) {
+        return
+      }
       for (const key in this.productline) {
-        this.$refs['sys-table'].toggleRowExpansion(this.productline[key], false)
+        sysTable.toggleRowExpansion(this.productline[key], false)
       }
       this.expandAll = false
     },

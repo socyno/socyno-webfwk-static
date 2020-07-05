@@ -26,13 +26,6 @@
         暂无数据
       </div>
     </div>
-    <!-- <BasePagination
-      v-model="page"
-      :options="page"
-      :total="999"
-      class="pagination"
-      @change="loadData"
-    /> -->
     <br>
     <el-button-group v-model="currentPageFlag">
       <el-button :disabled="noPrev" type="normal" size="small" icon="el-icon-arrow-left" @click="pageChange('prev')">

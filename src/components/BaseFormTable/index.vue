@@ -8,7 +8,11 @@
       @expand-change="onRowExpandChanged"
       @selection-change="onSelectionChanged"
     >
-      <el-table-column v-if="selectable" type="selection" width="50" />
+      <el-table-column
+        v-if="selectable"
+        type="selection"
+        width="50"
+      />
       <el-table-column type="expand">
         <template slot-scope="props">
           <BaseFormContent
@@ -23,7 +27,11 @@
       <slot v-for="(field, idx) in fieldModels">
         <el-table-column v-if="field.template" :key="idx" :label="field.title" :prop="field.key">
           <template slot-scope="scope">
-            <TemplateConfig :template="field.template" :field-model="field" :form-data="data[scope.$index]" />
+            <TemplateConfig
+              :template="field.template"
+              :field-model="field"
+              :form-data="data[scope.$index]"
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -36,7 +44,7 @@
           :prop="field.key"
         />
       </slot>
-      <el-table-column v-if="rowActions && rowActions.length > 0" class="basic-form-list-actpane" fixed="right" label="操作">
+      <el-table-column v-if="rowActions && rowActions.length > 0" class="basic-form-list-actpane" label="操作">
         <template slot-scope="scope">
           <slot v-for="(action) in rowActions">
             <el-button
@@ -54,7 +62,7 @@
     </el-table>
     <el-pagination
       v-if="pageInfo"
-      class="pagesbar"
+      class="basic-form-list-pagesbar"
       :current-page="pageInfo.page"
       :page-sizes="pageInfo.sizes"
       :page-size="pageInfo.limit"
@@ -137,7 +145,8 @@ export default {
           this.fieldModels = columns
         } else if (tool.isPlainObject(columns)) {
           this.formModel = parseFormClass(columns)
-          this.fieldModels = getVisibleFieldModels(columns, FORM_FIELD_OPTIONS.ListFirst)
+          this.fieldModels = getVisibleFieldModels(columns, FORM_FIELD_OPTIONS.ListFirst | FORM_FIELD_OPTIONS.OrderUndefinedExcluded)
+          // console.log('流程表单的列表字段模型定义解析结果如下：', this.fieldModels)
         }
       }
     }
@@ -229,7 +238,7 @@ export default {
      * 当分页信息发生变化时触发器
      */
     setPaging(paging) {
-      console.log('设置分页信息 => ', paging)
+      // console.log('设置分页信息 => ', paging)
       if (!paging || !tool.isPlainObject(paging)) {
         this.pageInfo = null
         return
@@ -269,13 +278,22 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
   .basic-form-list {
     .el-table__row {
       .el-button {
         padding: 2px !important;
         margin: 2px !important;
       }
+    }
+    .el-table__expanded-cell {
+      padding: 0px !important;
+    }
+    .basic-form-list-actpane {
+      min-height: 20px;
+    }
+    .basic-form-list-pagesbar {
+      display: block;
     }
   }
 

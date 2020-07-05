@@ -86,10 +86,14 @@ export default {
         this.value = null
         this.selectedOptions = []
         // console.log('sdddddddddd', fieldModel.value)
-        if (fieldModel && tool.isPlainObject(fieldModel.value)) {
-          // console.log('sdfffffffffwewe', fieldModel.value)
-          this.setCurrentOptions([fieldModel.value])
-          this.value = fieldModel.value
+        if (fieldModel) {
+          if (tool.isString(fieldModel.value)) {
+            fieldModel.value = { optionValue: fieldModel.value, optionDisplay: fieldModel.value }
+          }
+          if (tool.isPlainObject(fieldModel.value)) {
+            this.setCurrentOptions([fieldModel.value])
+            this.value = fieldModel.value
+          }
         }
       }
     }
