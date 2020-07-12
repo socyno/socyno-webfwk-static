@@ -9,8 +9,8 @@
       v-show="checkFieldVisible(field)"
       :key="`form-field-idex${index}`"
       :class="genFieldContainerStyle(field)"
+      :form-field-key="field.key"
       :draggable="draggable && !field.draggableDisabled"
-      :data-field="field.key"
       @click="$emit('fieldWrapperClick', field, index)"
     >
       <el-divider
@@ -140,16 +140,14 @@ export default {
         } else {
           targetField.before(sourceField)
         }
-        var domData
         var fieldName
         var resortedFields = []
         for (var fieldElement of this.$el.children) {
-          if (tool.toLower(fieldElement.tagName) === 'div' &&
-              tool.toLower(fieldElement.className).indexOf('form-field-wrapper') >= 0 &&
-              (domData = fieldElement.dataset) &&
-              (fieldName = tool.stringify(domData.field)).length > 0) {
-            resortedFields.push(fieldName)
+          fieldName = fieldElement.getAttribute('form-field-key')
+          if (tool.isBlank(fieldName)) {
+            continue
           }
+          resortedFields.push(fieldName)
         }
         this.$emit('fieldOrderChange', resortedFields)
       })
@@ -192,10 +190,10 @@ export default {
      */
     registerDragEventListener() {
       for (var fieldElement of this.$el.children) {
-        if (!fieldElement.dataset['field']) {
+        if (tool.isBlank(fieldElement.getAttribute('form-field-key'))) {
           continue
         }
-        if (fieldElement.dataset['draggableAdded']) {
+        if (!tool.isBlank(fieldElement.getAttribute('draggable-added'))) {
           continue
         }
         fieldElement.addEventListener('dragstart', (e) => {
@@ -215,7 +213,7 @@ export default {
           this.resetPrevDropTargetStyle()
           this.fieldDraggedStore = {}
         })
-        fieldElement.dataset['draggableAdded'] = true
+        fieldElement.setAttribute('draggable-added', 'true')
       }
     },
 

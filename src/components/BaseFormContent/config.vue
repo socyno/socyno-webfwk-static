@@ -20,7 +20,7 @@
             :width="field.listWidth ? field.listWidth : 0"
           >
             <template v-slot:header="{ column, $index }">
-              <div class="form-list-head" :title="column.property">
+              <div class="form-list-head" :form-list-field="column.property">
                 {{ column.label }}
               </div>
             </template>
@@ -375,7 +375,7 @@ export default {
       for (var headElement of formHeads.children) {
         headElement.draggable = true
         headElement.style.borderLeft = '2px solid darkviolet'
-        if (headElement.dataset['draggableAdded']) {
+        if (!tool.isBlank(headElement.getAttribute('draggable-added'))) {
           continue
         }
         // console.log(headElement)
@@ -400,7 +400,7 @@ export default {
           this.resetPrevDropTargetStyle()
           this.headDraggedStore = {}
         })
-        headElement.dataset['draggableAdded'] = true
+        headElement.setAttribute('draggable-added', 'true')
       }
     },
 
@@ -609,8 +609,8 @@ export default {
       for (var fieldElement of formHeads.children) {
         if (tool.toLower(fieldElement.tagName) === 'th' &&
              (columnFieldName = fieldElement.getElementsByClassName('form-list-head')) &&
-             columnFieldName.length > 0 && tool.toLower(columnFieldName[0].tagName) === 'div' &&
-             !tool.isBlank(columnFieldName = columnFieldName[0].getAttribute('title'))) {
+             columnFieldName.length > 0 &&
+             !tool.isBlank(columnFieldName = columnFieldName[0].getAttribute('form-list-field'))) {
           resortedColumns.push(columnFieldName)
         }
       }
