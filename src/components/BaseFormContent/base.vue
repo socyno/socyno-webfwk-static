@@ -10,17 +10,25 @@
       :key="`form-field-idex${index}`"
       :class="genFieldContainerStyle(field)"
       :draggable="draggable && !field.draggableDisabled"
+      :data-field="field.key"
+      @click="$emit('fieldWrapperClick', field, index)"
     >
-      <div :class="genFieldLabelSytle(field)">
+      <el-divider
+        v-if="field.comType === 'separator'"
+        content-position="center"
+      >
+        {{ getSeparatorTitle(field) }}
+      </el-divider>
+      <div v-if="field.comType !== 'separator'" :class="genFieldLabelSytle(field)">
         <slot name="label" :field="field" :index="index" :editable="editable && !field.readonly">
           <BaseFormLabel
-            v-if="field.comType !== 'separator' && field.comType !== 'button'"
+            v-if="field.comType !== 'button'"
             :tooltip="true"
             :field-model="field"
           />
         </slot>
       </div>
-      <div :class="genFieldContentSytle(field)">
+      <div v-if="field.comType !== 'separator'" :class="genFieldContentSytle(field)">
         <slot name="content" :field="field" :index="index" :editable="editable && !field.readonly" />
       </div>
     </div>
@@ -70,6 +78,13 @@ export default {
     return {
       fieldDraggedStore: {},
       collapsibleExpand: !this.collapsible
+    }
+  },
+  watch: {
+    fieldModels: {
+      handler() {
+        this.registerDragEventListener()
+      }
     }
   },
   mounted() {
@@ -125,21 +140,20 @@ export default {
         } else {
           targetField.before(sourceField)
         }
-      })
-      for (var fieldElement of this.$el.children) {
-        fieldElement.addEventListener('dragstart', (e) => {
-          this.fieldDraggedStore = {
-            sourceField: e.target,
-            sourceBorder: e.target.style.border
+        var domData
+        var fieldName
+        var resortedFields = []
+        for (var fieldElement of this.$el.children) {
+          if (tool.toLower(fieldElement.tagName) === 'div' &&
+              tool.toLower(fieldElement.className).indexOf('form-field-wrapper') >= 0 &&
+              (domData = fieldElement.dataset) &&
+              (fieldName = tool.stringify(domData.field)).length > 0) {
+            resortedFields.push(fieldName)
           }
-          e.target.style.border = '1px dotted red'
-        })
-        fieldElement.addEventListener('dragend', (e) => {
-          this.fieldDraggedStore.sourceField.style.border =
-                this.fieldDraggedStore.sourceBorder
-          this.resetPrevDropTargetStyle()
-        })
-      }
+        }
+        this.$emit('fieldOrderChange', resortedFields)
+      })
+      this.registerDragEventListener()
     }
   },
   methods: {
@@ -170,6 +184,38 @@ export default {
         right: clientRect.right - clientLeft,
         width: clientRect.width,
         height: clientRect.height
+      }
+    },
+
+    /**
+     * 注册字段拖拽事件
+     */
+    registerDragEventListener() {
+      for (var fieldElement of this.$el.children) {
+        if (!fieldElement.dataset['field']) {
+          continue
+        }
+        if (fieldElement.dataset['draggableAdded']) {
+          continue
+        }
+        fieldElement.addEventListener('dragstart', (e) => {
+          var sourceField
+          if (!(sourceField = this.getCurrentFieldElement(e.target))) {
+            return
+          }
+          this.fieldDraggedStore = {
+            sourceField: sourceField,
+            sourceBorder: sourceField.style.border
+          }
+          sourceField.style.border = '1px dotted red'
+        })
+        fieldElement.addEventListener('dragend', (e) => {
+          this.fieldDraggedStore.sourceField.style.border =
+                this.fieldDraggedStore.sourceBorder
+          this.resetPrevDropTargetStyle()
+          this.fieldDraggedStore = {}
+        })
+        fieldElement.dataset['draggableAdded'] = true
       }
     },
 
@@ -223,8 +269,12 @@ export default {
      * @param {Object} field
      */
     genFieldContainerStyle(field) {
-      var clazz = 'form-field-wrapper form-field-wrapper' +
-        getFieldPlacement(field)
+      var clazz = 'form-field-wrapper'
+      if (field.comType === 'separator') {
+        clazz += ' form-field-wrapper-separator'
+        return clazz
+      }
+      clazz += ' form-field-wrapper' + getFieldPlacement(field)
       if (!this.editable || field.readonly) {
         clazz += ' form-field-readonly'
       }
@@ -259,6 +309,28 @@ export default {
         clazz += ' column-longtext-content'
       }
       return clazz
+    },
+
+    /**
+     * 分割线的文本显示
+     * @param {Object} field
+     */
+    getSeparatorTitle(field) {
+      // console.log('分隔线：', field)
+      if (!field.hiddenCtl) {
+        return tool.trim(field.title)
+      }
+      var fieldType = tool.toLower(field.fieldType)
+      if (fieldType === 'hiddenifallempty') {
+        return '以下字段值全为空时被隐藏'
+      }
+      if (fieldType === 'hidden') {
+        return '以下所有字段将被隐藏'
+      }
+      if (fieldType === 'hiddenend') {
+        return '上方字段隐藏的结束符'
+      }
+      return '未知字段隐藏控制符：' + fieldType
     }
   }
 }
@@ -312,6 +384,9 @@ export default {
     width: calc(90.75% - 0px);
   }
   .form-field-wrapper12 {
+    width: calc(99% - 0px);
+  }
+  .form-field-wrapper-separator {
     width: calc(99% - 0px);
   }
   .form-field-title {

@@ -23,8 +23,9 @@
         删除关联界面模型
       </el-button>
     </div>
-    <SetupViewPane
-      :form-class="formExtraViewAttrs.currentFormModel || {}"
+    <SetupViewConfigPane
+      :form-name="formName"
+      :form-model="formExtraViewAttrs.currentFormModel || {}"
       @change="onFormViewAttributesChanged"
     />
 
@@ -61,10 +62,10 @@
 import tool from '@/utils/tools'
 import { Loading } from 'element-ui'
 import FormApi from '@/apis/formApi'
-import SetupViewPane from './config'
+import SetupViewConfigPane from './config'
 export default {
   components: {
-    SetupViewPane
+    SetupViewConfigPane
   },
   data() {
     return {
@@ -95,18 +96,7 @@ export default {
        */
       formExtraViewAttrs: {
         currentFormClass: '',
-        currentFormModel: {
-          // 流程名称
-          form: '',
-          // 表单的唯一键
-          path: '',
-          // 表单适用类型
-          types: [],
-          // 表单显示类型
-          names: [],
-          // 字段定义
-          fields: null
-        }
+        currentFormModel: null
       },
       /**
        * 新增关联界面模型
@@ -247,7 +237,7 @@ export default {
      * 添加关联界面模型信息
      */
     addExtraViewNames(extras) {
-      console.log('添加关联界面模型：', extras)
+      // console.log('添加关联界面模型：', extras)
       if (tool.isBlank(extras)) {
         return
       }
@@ -294,7 +284,7 @@ export default {
         that.formApi.saveExtraViewNames(removed).then(res => {
           that.formAllViewNames = formAllViewNames
           that.formExtraViewAttrs.currentFormClass = ''
-          that.formExtraViewAttrs.currentFormModel = {}
+          that.formExtraViewAttrs.currentFormModel = null
         })
       })
     },
@@ -307,16 +297,9 @@ export default {
       if (tool.isBlank(formViewKey)) {
         return
       }
-      var formViewInfo = this.formAllViewNames[formViewKey]
       this.formExtraViewAttrs['currentFormModel'] = null
       this.formApi.loadViewDefinition(formViewKey).then((formViewData) => {
-        this.formExtraViewAttrs['currentFormModel'] = {
-          path: formViewKey,
-          form: this.formName,
-          types: formViewInfo.types,
-          names: formViewInfo.names,
-          formModel: formViewData
-        }
+        this.formExtraViewAttrs['currentFormModel'] = formViewData
       }).catch((e) => {
         this.$notify.error('加载表单界面模型原始数据失败：' + formViewKey)
       })

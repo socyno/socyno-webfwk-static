@@ -44,6 +44,9 @@ export function setFieldComponentType(fieldModel) {
   if (!fieldModel) {
     return
   }
+  /* 首先，必须重置控制字段标记 */
+  fieldModel.hiddenCtl = false
+  fieldModel.separator = false
   var fieldType = tool.toLower(fieldModel.fieldType)
   switch (fieldType) {
     case 'password':
@@ -94,10 +97,15 @@ export function setFieldComponentType(fieldModel) {
       fieldModel.comType = 'TimeOnly'
       break
     case 'separator':
+      fieldModel.separator = true
       fieldModel.comType = 'separator'
       break
     default:
-      if (fieldModel.type === 'button') {
+      if (fieldType.indexOf('hidden') === 0) {
+        fieldModel.hiddenCtl = true
+        fieldModel.separator = true
+        fieldModel.comType = 'separator'
+      } else if (fieldModel.type === 'button') {
         fieldModel.comType = 'button'
       } else if (fieldModel.fieldOptionsType === 'DYNAMIC') {
         fieldModel.comType = 'dynamicSelect'
@@ -127,7 +135,7 @@ export function setFieldComponentType(fieldModel) {
 /**
  * 解析原始的表单数据
  */
-export function parseFormClass(formClass, defaultData) {
+export function parseFormClass(formClass, formData) {
   if (tool.isUndef(formClass) || tool.isNull(formClass)) {
     return formClass
   }
@@ -137,24 +145,24 @@ export function parseFormClass(formClass, defaultData) {
     return formClass
   }
   // console.log('界面模型基本数据结构:', formClass)
-  if (!defaultData) {
-    defaultData = {}
-  }
-  /* 表单的默认宽度设置 10/12 */
-  if (!formClass.placement && formClass.customPlacement) {
-    formClass.placement = tool.parseInteger(formClass.customPlacement, 10)
+  if (!tool.isPlainObject(formData)) {
+    formData = {}
+  } else {
+    formData = tool.jsonCopy(formData)
   }
   for (const key in formClass.properties) {
     var fieldModel = formClass.properties[key]
     fieldModel.key = key
     /* 填充字段的默认值 */
-    var value = defaultData[key]
+    var value = formData[key]
     if (fieldModel.type === 'array') {
       value = value || []
     } else if (fieldModel.type === 'object') {
       value = value || null
     } else if (fieldModel.type === 'boolean') {
       value = !!value
+    } else if (tool.isUndef(value)) {
+      value = null
     }
     /**
      * 针对静态可选项，由于后端出来的 StaticOption 的始终是
@@ -167,39 +175,41 @@ export function parseFormClass(formClass, defaultData) {
       value = tool.stringify(value)
     }
     fieldModel.value = value
-    /* 处理空标题的特殊值 */
+    /* 处理标题相关的配置，显示、宽度、冒号等 */
     fieldModel.title = tool.trim(fieldModel.title)
     if (fieldModel.title.toLowerCase() === '<empty>') {
       fieldModel.title = ''
     }
-    /* 标题宽度，和是否显示冒号 */
-    if (!tool.looksLikeInteger(fieldModel.titleWidth)) {
-      fieldModel.titleWidth = tool.parseInteger(fieldModel.customTitleWidth, '')
+    fieldModel.titleWithoutColon = false
+    fieldModel.customTitleWithoutColon = tool.toLower(fieldModel.customTitleWithoutColon)
+    if (fieldModel.customTitleWithoutColon &&
+            fieldModel.customTitleWithoutColon !== '0' &&
+            fieldModel.customTitleWithoutColon !== 'no' &&
+            fieldModel.customTitleWithoutColon !== 'off' &&
+            fieldModel.customTitleWithoutColon !== 'false') {
+      fieldModel.titleWithoutColon = true
     }
-    if (!tool.isBoolean(fieldModel.titleWithoutColon)) {
-      fieldModel.titleWithoutColon = !!fieldModel.customTitleWithoutColon
+    fieldModel.titleWidth = tool.parseInteger(fieldModel.customTitleWidth, '')
+    /* 字段的显示及布局信息 */
+    if (!tool.isBlank(fieldModel.customPosition)) {
+      fieldModel.position = tool.parseInteger(fieldModel.customPosition, 0)
     }
-    /* 布局信息, 长高信息 */
-    if (!fieldModel.position && fieldModel.customPosition) {
-      fieldModel.position = fieldModel.customPosition
+    if (!tool.isBlank(fieldModel.customPlacement)) {
+      fieldModel.placement = tool.parseInteger(fieldModel.customPlacement, '')
     }
-    if (!fieldModel.placement && fieldModel.customPlacement) {
-      fieldModel.placement = fieldModel.customPlacement
+    if (!tool.isBlank(fieldModel.customListWidth)) {
+      fieldModel.listWidth = tool.parseInteger(fieldModel.customListWidth, '')
     }
-    if (!fieldModel.listWidth && fieldModel.customListWidth) {
-      fieldModel.listWidth = fieldModel.customListWidth
+    if (!tool.isBlank(fieldModel.customListPosition)) {
+      fieldModel.listPosition = tool.parseInteger(fieldModel.customListPosition, 0)
     }
-    if (!fieldModel.listPosition && fieldModel.customListPosition) {
-      fieldModel.listPosition = fieldModel.customListPosition
-    }
-    if (!fieldModel.placerows && fieldModel.customPlacerows) {
-      fieldModel.placerows = fieldModel.customPlacerows
+    if (!tool.isBlank(fieldModel.customPlacerows)) {
+      fieldModel.placerows = tool.parseInteger(fieldModel.customPlacerows, '')
     }
     fieldModel.placement = tool.parseInteger(fieldModel.placement, '')
-    fieldModel.placerows = tool.parseInteger(fieldModel.placerows, '')
-    fieldModel.listWidth = tool.parseInteger(fieldModel.listWidth, '')
-    fieldModel.position = tool.parseInteger(fieldModel.position, 0)
+    fieldModel.listWidth = tool.parseInteger(fieldModel.listWidth, 0)
     fieldModel.listPosition = tool.parseInteger(fieldModel.listPosition, 0)
+    fieldModel.placerows = tool.parseInteger(fieldModel.placerows, '')
     /* 填充字段的控件类型 */
     setFieldComponentType(fieldModel)
     /* 处理字段说明信息 */
@@ -244,16 +254,15 @@ export function parseFormClass(formClass, defaultData) {
 /**
  * 根据表单的定义和默认数据，获取表单的可显示字段模型列表
  * @param {Object} formClass
- * @param {String} style list(列表模式) | form(表单模式)
- * @param {Object} defaultData
+ * @param {Object} formData
+ * @param {Number} parser options
  */
-export function getVisibleFieldModels(formClass, defaultData, options) {
-  // var options =
+export function getVisibleFieldModels(formClass, formData, options) {
   if (arguments.length < 3) {
     options = FORM_FIELD_OPTIONS.Default
-    if (tool.isNumber(defaultData)) {
-      options = defaultData
-      defaultData = null
+    if (tool.isNumber(formData)) {
+      options = formData
+      formData = {}
     }
   }
   // console.log('界面模型可见字段解析，options = ', options)
@@ -266,7 +275,7 @@ export function getVisibleFieldModels(formClass, defaultData, options) {
     fieldPosition = 'listPosition'
   }
   // console.log('界面模型可见字段解析，position field = ', fieldPosition)
-  var formModel = parseFormClass(formClass, defaultData)
+  var formModel = parseFormClass(formClass, formData)
   if (tool.isBlank(formModel) || !formModel.properties) {
     return null
   }
@@ -361,13 +370,13 @@ export function getVisibleFieldModels(formClass, defaultData, options) {
     var hiddenRemovedFields = []
     var hiddenFieldsStarted = false
     for (fieldModel of fieldModels) {
-      if (!hiddenFieldsStarted) {
-        hiddenRemovedFields.push(fieldModel)
-      } else if ((fieldType = tool.toLower(fieldModel.fieldType)).indexOf('hidden') === 0) {
+      if ((fieldType = tool.toLower(fieldModel.fieldType)).indexOf('hidden') === 0) {
         hiddenFieldsStarted = false
         if (fieldType === 'hidden') {
           hiddenFieldsStarted = true
         }
+      } else if (!hiddenFieldsStarted) {
+        hiddenRemovedFields.push(fieldModel)
       }
     }
     fieldModels = hiddenRemovedFields
@@ -403,7 +412,7 @@ export function getVisibleFieldModels(formClass, defaultData, options) {
    * 针对列表优先的情况，在列表字段为空时，需要重新按照表单的形式重新计算
    */
   if ((options & FORM_FIELD_OPTIONS.ListFirst) !== 0 && fieldModels.length <= 0) {
-    return getVisibleFieldModels(formClass, defaultData, options - FORM_FIELD_OPTIONS.ListFirst)
+    return getVisibleFieldModels(formClass, formData, options - FORM_FIELD_OPTIONS.ListFirst)
   }
 
   /**

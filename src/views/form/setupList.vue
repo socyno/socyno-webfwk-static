@@ -25,9 +25,6 @@
             <a target="_blank" :href="`#/form/flowchart/${scope.row.formName}`">流程图</a>
           </el-button>
           <el-button type="text" size="small">
-            <a target="_blank" :href="`#/form/list/${scope.row.formName}`">数据</a>
-          </el-button>
-          <el-button type="text" size="small">
             <a :href="`#/form/setup/${scope.row.formName}`">设置</a>
           </el-button>
           <el-button type="text" size="small" @click="updataClick(scope.row)">
@@ -49,7 +46,7 @@
         </el-form-item>
         <el-form-item label="后端服务：" prop="formBackend">
           <el-select v-model="addParam.formBackend" placeholder="请选择后端服务">
-            <el-option label="srpcloud-backend" value="srpcloud-backend" />
+            <el-option label="webfwk-gateway" value="webfwk-gateway" />
           </el-select>
         </el-form-item>
         <el-form-item label="服务类：" prop="formService">

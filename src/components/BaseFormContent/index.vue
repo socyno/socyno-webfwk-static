@@ -2,7 +2,7 @@
   <BaseFormContentBase
     :editable="editable"
     :collapsible="collapsible"
-    :field-models="fieldModels"
+    :field-models="fieldModelsEx"
   >
     <template v-slot:content="{ field }">
       <!-- eslint-disable-next-line vue/no-v-html -->
@@ -94,10 +94,6 @@
           {{ getTextDisplay(field) }}
         </div>
       </div>
-      <!-- 分隔线 -->
-      <el-divider v-else-if="field.comType === 'separator'" content-position="center">
-        <BaseFormLabel :tooltip="true" without-colon :field-model="field" />
-      </el-divider>
       <!-- 操作按钮 -->
       <div v-else-if="field.comType === 'button'">
         <el-button :size="field.styleSize || 'mini'" :type="field.styleType || 'text'" @click="onFieldButtonClick(field)">
@@ -195,12 +191,14 @@
           value-format="HH:mm:ss"
           @input="$forceUpdate()"
         />
+        <!-- 分隔线: 分割线无需绘制，在 label 中体现 -->
+        <div v-else-if="field.comType === 'separator'" />
         <!-- 简单文本框 -->
         <el-input
           v-else
           v-model="field.value"
           size="mini"
-          :placeholder="'请输入' + field.title"
+          :placeholder="'请输入' + (field.title || '')"
           :type="field.type === 'integer' ? 'number' : 'text'"
           @input="$forceUpdate()"
         />
@@ -220,7 +218,6 @@
 <script>
 import tool from '@/utils/tools'
 import FileUploader from '@/components/BaseFormItem/FileUploader'
-import BaseFormLabel from '@/components/BaseFormItem/BaseFormLabel'
 import TemplateConfig from '@/components/BaseFormItem/TemplateConfig'
 import DynamicSingleSelector from '@/components/BaseFormItem/DynamicSingleSelector'
 import DynamicMultipleCreator from '@/components/BaseFormItem/DynamicMultipleCreator'
@@ -230,7 +227,6 @@ export default {
   name: 'BaseFormContent',
   components: {
     FileUploader,
-    BaseFormLabel,
     TemplateConfig,
     DynamicSingleSelector,
     DynamicMultipleCreator,
@@ -318,26 +314,36 @@ export default {
       default: null
     }
   },
+  data() {
+    return {
+      fieldModels: []
+    }
+  },
   computed: {
-    fieldModels() {
-      if (!this.formModel) {
-        return []
-      }
+    fieldModelsEx() {
       return this.getVisibleFieldModels(this.formModel, this.defaultData)
     }
   },
   methods: {
     /**
      * 解析可显示的字段模型清单
+     *
+     * 通过 computed 计算的数据在使用时会出现 input 控件
+     * 无法输入的情况，因此这里将计算结果保存在 data 的
+     * fieldModels 属性中。
+     *
+     * 至于导致 input 控件无法输入的原因暂不明确，通过
+     * 这种方式从结果看可以规避该问题的出现
      */
     getVisibleFieldModels(formModel, formData) {
       var options = FORM_FIELD_OPTIONS.SeparatorIncluded |
                      FORM_FIELD_OPTIONS.HiddenIfAllEmpty |
                      FORM_FIELD_OPTIONS.OrderUndefinedExcluded
-      if (this.showAll === true) {
-        options = FORM_FIELD_OPTIONS.All
+      this.fieldModels = []
+      if (tool.isPlainObject(formModel)) {
+        this.fieldModels = getVisibleFieldModels(formModel, formData, options)
       }
-      return getVisibleFieldModels(formModel, formData, options)
+      return this.fieldModels
     },
     /*
      * 获取字段的只读文本显示

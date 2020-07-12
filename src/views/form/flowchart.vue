@@ -3,7 +3,7 @@
     <el-button type="primary" style="position: absolute; top: 10px; left: 10px; z-index: 999; width: 250px; height: 80px" @click="toggleFlowChartType">
       {{ type === 'unchanged' ? '隐藏无状态流转的事件' : '显示所有事件' }}
     </el-button>
-    <div id="form-flow-chart-canvas" style="background-color: #ECA;" />
+    <div id="form-flow-chart-canvas" />
   </div>
 </template>
 <script>
@@ -52,7 +52,7 @@ export default {
             'toolManager.hoverDelay': 100, // tooltip提示显示延时
             'toolManager.toolTipDuration': 100000, // tooltip持续显示时间
             'isReadOnly': true, // 只读
-            'grid.visible': true, // 显示网格
+            'grid.visible': false, // 显示网格
             'linkingTool.direction': go.LinkingTool.ForwardsOnly,
             layout: MAKE(go.LayeredDigraphLayout, { isInitial: true, isOngoing: true, layerSpacing: 50 })
           })

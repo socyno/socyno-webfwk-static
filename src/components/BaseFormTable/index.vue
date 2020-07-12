@@ -24,26 +24,26 @@
           />
         </template>
       </el-table-column>
-      <slot v-for="(field, idx) in fieldModels">
-        <el-table-column v-if="field.template" :key="idx" :label="field.title" :prop="field.key">
-          <template slot-scope="scope">
-            <TemplateConfig
-              :template="field.template"
-              :field-model="field"
-              :form-data="data[scope.$index]"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column
-          v-else
-          :key="idx"
-          :show-overflow-tooltip="showOverflowTooltip"
-          :width="field.listWidth ? field.listWidth : 0"
-          :formatter="columnFormatter"
-          :label="field.title"
-          :prop="field.key"
-        />
-      </slot>
+      <el-table-column
+        v-for="(field, idx) in fieldModels"
+        :key="idx"
+        :label="field.title"
+        :prop="field.key"
+        :show-overflow-tooltip="showOverflowTooltip"
+        :width="field.listWidth ? field.listWidth : 0"
+      >
+        <template v-slot:default="{ row, column, $index }">
+          <TemplateConfig
+            v-if="field.template"
+            :template="field.template"
+            :field-model="field"
+            :form-data="row"
+          />
+          <div v-else>
+            {{ getFieldValueDisplay(field, row[field.key]) }}
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column v-if="rowActions && rowActions.length > 0" class="basic-form-list-actpane" label="操作">
         <template slot-scope="scope">
           <slot v-for="(action) in rowActions">
@@ -139,9 +139,10 @@ export default {
     columns: {
       immediate: true,
       handler(columns) {
+        this.formModel = null
+        this.fieldModels = []
         // console.log('表格视图模型 => ', columns)
         if (tool.isArray(columns)) {
-          this.formModel = null
           this.fieldModels = columns
         } else if (tool.isPlainObject(columns)) {
           this.formModel = parseFormClass(columns)
@@ -159,19 +160,10 @@ export default {
   methods: {
     /**
      * 列表格式化
-     * @param {Object} row
-     * @param {Object} column
-     * @param {Object} cellValue
-     * @param {Object} index
+     * @param {Object} field
      */
-    columnFormatter(row, column, cellValue, index) {
-      var fieldIndex = tool.inArray(column.property, this.fieldModels, function(a, b) {
-        return a.key === b
-      })
-      // console.log('列表格式化，当前的列号为：', fieldIndex)
-      // console.log('列表格式化，当前的数据为', cellValue)
-      var fieldModel = this.fieldModels[fieldIndex]
-      return getFieldValueDisplay(fieldModel, cellValue)
+    getFieldValueDisplay(fieldModel, fieldValue) {
+      return getFieldValueDisplay(fieldModel, fieldValue)
     },
 
     /**
