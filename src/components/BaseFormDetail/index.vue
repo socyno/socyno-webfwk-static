@@ -40,7 +40,7 @@
       :visible.sync="actionDrawer.visible"
       class="form-action-drawer"
       custom-class="form-action-wrapper"
-      :modal="false"
+      :modal="true"
       :with-header="false"
       :wrapper-closable="false"
       direction="ltr"
@@ -51,6 +51,7 @@
       <div v-if="actionDrawer.showChangeLogs">
         <Logs
           ref="formLogs"
+          class="form-action-content"
           :form-name="formName"
           :form-id="formId"
           @back="onActionFormCancel"
@@ -117,7 +118,7 @@ export default {
   },
   watch: {
     formId: {
-      handler() {
+      handler: function() {
         if (this.formId && this.enableAutoLoad) {
           this.load()
         }
@@ -297,8 +298,8 @@ export default {
 }
 .form-action-drawer {
     background-color: #FFF;
-    right: 200px !important;
-    width: calc(100% - 200px) !important;
+    // right: 0px !important;
+    width: 100% !important;
   .form-action-wrapper {
      width: 99% !important;
     .form-action-content {

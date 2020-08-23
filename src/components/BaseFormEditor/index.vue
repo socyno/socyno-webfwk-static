@@ -12,10 +12,12 @@
     />
     <div class="basic-form-buttons">
       <el-button type="primary" size="mini" @click="onSubmit()">
-        提交
+        {{ formModel.buttonConfirmDisplayName ? formModel.buttonConfirmDisplayName
+          : '提交' }}
       </el-button>
       <el-button type="info" style="float:right" size="mini" @click="onCancel()">
-        取消
+        {{ formModel.buttonCancelDisplayName ? formModel.buttonCancelDisplayName
+          : '取消' }}
       </el-button>
     </div>
   </div>

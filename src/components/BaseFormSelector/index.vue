@@ -94,7 +94,7 @@ export default {
   },
   watch: {
     tableInitData: {
-      handler(data) {
+      handler: function(data) {
         // console.log('基础表单选择器数据更新：', data)
       }
     }

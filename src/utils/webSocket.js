@@ -91,6 +91,13 @@ export function CommonWebSocket(url, handler) {
 
   // 连接关闭的回调方法
   websocket.onclose = function(e) {
+    if (idleCheckTimer) {
+      try {
+        clearInterval(idleCheckTimer)
+      } catch (e) {
+        // no console
+      }
+    }
     // 如果未结束进行重新连接
     if (mesageEnd === false || typeof mesageEnd === 'string') {
       MessageBox.confirm(mesageEnd || '未知错误', 'socket连接被断开,是否要重连?', {

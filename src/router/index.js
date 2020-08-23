@@ -82,6 +82,23 @@ router.beforeEach((to, from, next) => {
   if (to.name === 'Dashboard') {
     store.commit('uiControl/setCurrentMenuInit')
   }
-  document.title = tool.title(to.meta.title || to.query.name, true)
+  // document.title = prefixTitle + (to.meta.title || to.query.name)
+  // eslint-disable-next-line
+  try {
+    var appWrapper = document.body
+    var wrapperChildren = appWrapper.children
+    for (var c = wrapperChildren.length - 1; c >= 0; c--) {
+      var dom = wrapperChildren[c]
+      if (tool.toLower(dom.tagName) === 'div') {
+        if (dom.id === 'app' || dom.className.indexOf('el-menu') >= 0) {
+          continue
+        }
+        appWrapper.removeChild(dom)
+      }
+    }
+  } catch (error) {
+    // no console
+  }
+
   next()
 })

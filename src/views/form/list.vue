@@ -9,8 +9,8 @@
     />
 
     <BaseActionsPane
-      v-if="actions"
-      :actions="actions"
+      v-if="visibleActions && visibleActions.length > 0"
+      :actions="visibleActions"
       @input="onFormActionTriggerd"
     />
 
@@ -21,6 +21,7 @@
       :data="currentTableData"
       :columns="currentQuery.resultClass"
       :row-actions="rowActions"
+      :actions-column-width="200"
       @paging="pageListData"
       @expand-change="onRowExpandChanged"
       @row-action-click="onRowActionClick"
@@ -71,7 +72,7 @@
 import '@/styles/form.scss'
 import tool from '@/utils/tools'
 import FormApi from '@/apis/formApi'
-import { getFieldValueDisplay, getVisibleFieldModels } from '@/utils/formUtils'
+import { getFieldValueDisplay, getVisibleFieldModels, FORM_FIELD_OPTIONS } from '@/utils/formUtils'
 import BaseFormQuery from '@/components/BaseFormQuery'
 import BaseFormTable from '@/components/BaseFormTable'
 import BaseFormAction from '@/components/BaseFormAction'
@@ -93,26 +94,26 @@ export default {
       pagingInfo: null,
       currentQuery: null,
       rowActions: [
+        // {
+        //   text: '展开',
+        //   onClick: function(row, index) {
+        //     this.$refs.formTable.toggleRowExpansion(row, true)
+        //   },
+        //   visible: function(row, index) {
+        //     return !this.getRowExpansionVisible(row)
+        //   }
+        // },
+        // {
+        //   text: '收起',
+        //   onClick: function(row, index) {
+        //     this.$refs.formTable.toggleRowExpansion(row, false)
+        //   },
+        //   visible: function(row, index) {
+        //     return this.getRowExpansionVisible(row)
+        //   }
+        // },
         {
-          text: '展开',
-          onClick: function(row, index) {
-            this.$refs.formTable.toggleRowExpansion(row, true)
-          },
-          visible: function(row, index) {
-            return !this.getRowExpansionVisible(row)
-          }
-        },
-        {
-          text: '收起',
-          onClick: function(row, index) {
-            this.$refs.formTable.toggleRowExpansion(row, false)
-          },
-          visible: function(row, index) {
-            return this.getRowExpansionVisible(row)
-          }
-        },
-        {
-          text: '新窗口',
+          text: '详情',
           onClick: function(row, index) {
             this.open(`#/form/detail?formName=${this.formName}&formId=${row.id}`)
           }
@@ -122,15 +123,16 @@ export default {
           onClick: function(row, index) {
             this.open(`#/form/flowchart/${this.formName}?formId=${row.id}`)
           }
-        },
-        {
-          text: '详情',
-          onClick: function(row, index) {
-            this.showFormDetail(row.id)
-          }
         }
+        // ,m {
+        //   text: '详情',
+        //   onClick: function(row, index) {
+        //     this.showFormDetail(row.id)
+        //   }
+        // }
       ],
       formName: null,
+      visibleActions: null,
       currentFieldModels: null,
       filterParams: null,
       rowActionsData: null,
@@ -140,7 +142,7 @@ export default {
     }
   },
   watch: {
-    '$route'(to, from) {
+    '$route': function(to, from) {
       this.resetAllData()
       this.initFormDefinition()
     }
@@ -169,6 +171,7 @@ export default {
       this.currentQuery = {
         formClass: {}
       }
+      this.visibleActions = []
       this.currentFieldModels = {}
       this.formName = this.$route.params.formName
       this.formApi = new FormApi(this.formName)
@@ -232,7 +235,10 @@ export default {
       // console.log('切换查询如下：', changedQuery)
       this.filterParams = {}
       this.currentQuery = changedQuery
-      this.currentFieldModels = getVisibleFieldModels(changedQuery.resultClass)
+      this.currentFieldModels = getVisibleFieldModels(
+        changedQuery.resultClass,
+        FORM_FIELD_OPTIONS.ListFirst
+      )
       this.initListData()
     },
     /**
@@ -243,9 +249,24 @@ export default {
       this.formApi.loadDefinition().then((data) => {
         this.queries = data.queries
         this.actions = data.quickActions
+        this.visibleActions = this.getVisibleActions(data.visibleActions)
         tool.title(data.title || '表单列表', true)
       }).finally(res => {
         this.loading = false
+      })
+    },
+    /**
+     * 获取可显示的事件
+     */
+    getVisibleActions(visibleActions) {
+      if (!tool.isArray(this.actions)) {
+        return []
+      }
+      if (!tool.isArray(visibleActions) || visibleActions.length <= 0) {
+        return this.actions
+      }
+      return this.actions.filter((item) => {
+        tool.inArray(item.name, visibleActions)
       })
     },
     /**

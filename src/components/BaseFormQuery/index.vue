@@ -51,7 +51,7 @@ export default {
   watch: {
     selected: {
       // immediate: true,
-      handler(selected) {
+      handler: function(selected) {
         if (!this.queryModels) {
           return
         }
@@ -63,7 +63,7 @@ export default {
     },
     queryModels: {
       immediate: true,
-      handler(queries) {
+      handler: function(queries) {
         if (tool.isUndefOrNull(this.selected) || this.selected < 0 || this.selected >= queries.length) {
           this.selected = 0
           return

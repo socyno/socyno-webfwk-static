@@ -574,6 +574,128 @@ const tool = {
     } finally {
       document.body.removeChild(link)
     }
+  },
+
+  /**
+   *  解决IE，Edge浏览器不兼容before函数
+   * @param item
+   */
+  propBefore(item) {
+    if (item.hasOwnProperty('before')) {
+      return item
+    }
+    Object.defineProperty(item, 'before', {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: function before() {
+        var argArr = Array.prototype.slice.call(arguments)
+        var docFrag = document.createDocumentFragment()
+
+        argArr.forEach(function(argItem) {
+          var isNode = argItem instanceof Node
+          docFrag.appendChild(isNode ? argItem : document.createTextNode(String(argItem)))
+        })
+
+        this.parentNode.insertBefore(docFrag, this)
+      }
+    })
+    return item
+  },
+
+  /**
+   * 解决IE，Edge浏览器不兼容after函数
+   * @param item
+   */
+  propAfter(item) {
+    if (item.hasOwnProperty('after')) {
+      return item
+    }
+    Object.defineProperty(item, 'after', {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: function after() {
+        var argArr = Array.prototype.slice.call(arguments)
+        var docFrag = document.createDocumentFragment()
+
+        argArr.forEach(function(argItem) {
+          var isNode = argItem instanceof Node
+          docFrag.appendChild(isNode ? argItem : document.createTextNode(String(argItem)))
+        })
+
+        this.parentNode.insertBefore(docFrag, this.nextSibling)
+      }
+    })
+    return item
+  },
+
+  /**
+   * 时间的格式化
+   * @param {String} utcDateTime 2020-09-20T17:57:00Z
+   * @param {String} type date|time|datetime
+   */
+  formatUtcDateTime(utcDateTime, type) {
+    if (tool.isBlank(utcDateTime = tool.trim(utcDateTime))) {
+      return ''
+    }
+    if (utcDateTime.match(/^\d{4}\-\d{1,2}\-\d{1,2}$/)) {
+      return utcDateTime
+    }
+    if (utcDateTime.match(/^\d{1,2}:\d{1,2}(:\d{1,2})?$/)) {
+      return utcDateTime
+    }
+    if (utcDateTime.match(/^\d{4}\-\d{1,2}\-\d{1,2}\s+\d{1,2}:\d{1,2}/)) {
+      return utcDateTime
+    }
+    if (utcDateTime.match(/^\d{1,2}:\d{1,2}:\d{1,2}(\.\d+)?Z$/)) {
+      utcDateTime = '1970-01-01T' + utcDateTime
+    }
+    if (!utcDateTime.match(/^\d{4}\-\d{1,2}\-\d{1,2}T\d{1,2}:\d{1,2}:\d{1,2}(\.\d+)Z$/)) {
+      throw new Error('UTC datetime format error: ' + utcDateTime)
+    }
+    console.log('utcDateTime = ', utcDateTime)
+    // 转为正常的时间格式 年-月-日 时:分:秒
+    var tIndexOf = utcDateTime.indexOf('T')
+    var zIndexOf = utcDateTime.indexOf('Z')
+    var yearMonthDay = utcDateTime.substr(0, tIndexOf)
+    var hourMinuteSecond = utcDateTime.substr(tIndexOf + 1, zIndexOf - tIndexOf - 1)
+    var fmtDataTime = yearMonthDay + ' ' + hourMinuteSecond
+    // 增加8个小时，北京时间比utc时间多八个时区
+    var cstDateTime = new Date(Date.parse(fmtDataTime) + 8 * 60 * 60000)
+    var cstYear = cstDateTime.getFullYear()
+    var cstMonth = cstDateTime.getMonth() + 1
+    var cstDate = cstDateTime.getDate()
+    var cstHours = cstDateTime.getHours()
+    var cstMinutes = cstDateTime.getMinutes()
+    var cstSeconds = cstDateTime.getSeconds()
+    cstMonth = cstMonth < 10 ? ('0' + cstMonth) : cstMonth
+    cstDate = cstDate < 10 ? ('0' + cstDate) : cstDate
+    cstHours = cstHours < 10 ? ('0' + cstHours) : cstHours
+    cstMinutes = cstMinutes < 10 ? ('0' + cstMinutes) : cstMinutes
+    cstSeconds = cstSeconds < 10 ? ('0' + cstSeconds) : cstSeconds
+    if ((type = this.toLower(type)) === 'date') {
+      return cstYear + '-' + cstMonth + '-' + cstDate
+    } else if (type === 'time') {
+      return cstHours + ':' + cstMinutes + ':' + cstSeconds
+    }
+    return cstYear + '-' + cstMonth + '-' + cstDate +
+            ' ' + cstHours + ':' + cstMinutes + ':' + cstSeconds
+  },
+
+  /**
+   * 检测流程字段的标签中，是否包含指定值
+   * @param {String | Array} tags
+    * @param {String} searchTag
+   */
+  formScriptTagsContains(tags, searchTag) {
+    if (this.isBlank(searchTag)) {
+      return false
+    }
+    if (!this.isArray(tags)) {
+      tags = this.trim(tags).split(/[,;\s]+/)
+    }
+    return tags.length >= 0 && this.inArray(searchTag, tags) >= 0
   }
 }
 

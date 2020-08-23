@@ -1,6 +1,6 @@
 <template>
   <div class="form-setup">
-    <el-page-header class="common-page-header" :content="'设置 “'+formTitle+'”'" @back="$router.go(-1)" />
+    <el-page-header class="common-page-header" title="关闭" :content="'设置 “'+formTitle+'”'" @back="onGoBack" />
     <div style="margin-bottom: 20px;">
       <el-select
         :key="'form-extras-selector'"
@@ -12,7 +12,7 @@
         <el-option
           v-for="(info, view, index) in formAllViewNames"
           :key="`form-view-name-${index}`"
-          :label="`${view} - ${info.names.join(', ')}`"
+          :label="`${view} - ${info.names.join(', ').substr(0, 80)}`"
           :value="view"
         />
       </el-select>
@@ -147,8 +147,8 @@ export default {
           `查询结果:${query.display || query.name}`
         )
         // 此处调用目的是确保关联界面模型能被自动添加
-        this.mergeViewAttributes(query.formClass)
-        this.mergeViewAttributes(query.resultClass)
+        this.findAndMergeViewNames(query.formClass)
+        this.findAndMergeViewNames(query.resultClass)
       }
       var allActions = []
       if (tool.isArray(definition.actions)) {
@@ -171,8 +171,8 @@ export default {
           )
         }
         // 此处调用目的是确保关联界面模型能被自动添加
-        this.mergeViewAttributes(action.formClass)
-        this.mergeViewAttributes(action.resultClass)
+        this.findAndMergeViewNames(action.formClass)
+        this.findAndMergeViewNames(action.resultClass)
       }
       this.addToFormAllViewNames(
         definition.formClass.classPath,
@@ -180,7 +180,7 @@ export default {
         `详情页面`
       )
       // 此处调用目的是确保关联界面模型能被自动添加
-      this.mergeViewAttributes(definition.formClass)
+      this.findAndMergeViewNames(definition.formClass)
       this.formApi.loadExtraViewNames().then(names => {
         // console.log('获取到的表单关联界面模型清单如下：')
         // console.log(names)
@@ -189,6 +189,10 @@ export default {
     })
   },
   methods: {
+    onGoBack() {
+      window.close()
+    },
+
     /**
      * 添加界面模型信息
      */
@@ -302,77 +306,24 @@ export default {
         this.formExtraViewAttrs['currentFormModel'] = formViewData
       }).catch((e) => {
         this.$notify.error('加载表单界面模型原始数据失败：' + formViewKey)
+        throw e
       })
     },
 
-    mergeViewAttributes(origin, customs) {
-      if (!origin) {
+    findAndMergeViewNames(origin) {
+      if (!origin || !tool.isPlainObject(origin.properties)) {
         return
       }
-      var result = origin.properties ? tool.jsonCopy(origin.properties) : {}
-      result[':form'] = {
-        position: 1,
-        title: origin.title,
-        description: origin.description
-      }
-      for (var key in result) {
-        result[key] = Object.assign(result[key], {
-          custom: result[key].custom,
-          modifiable: result[key].modifiable,
-          title: result[key].title || '',
-          position: result[key].position || '',
-          description: result[key].description || '',
-          fieldType: result[key].fieldType || 'string',
-          type: result[key].type || 'string',
-          template: result[key].template || '',
-          pattern: result[key].pattern || '',
-          placement: result[key].placement || '',
-          placerows: result[key].placerows || '',
-          listWidth: result[key].listWidth || '',
-          listPosition: result[key].listPosition || ''
-        })
-        /**
-         * 所有发现的关联界面模型，都将被自动添加到可选列表中
-         */
-        if (result[key].items && !tool.isBlank(result[key].items.classPath)) {
-          this.addExtraViewNames(result[key].items.classPath)
-        } else if (!tool.isBlank(result[key].classPath)) {
-          this.addExtraViewNames(result[key].classPath)
+      /**
+       * 所有发现的关联界面模型，都将被自动添加到可选列表中
+       */
+      for (var key in origin) {
+        if (origin[key].items && !tool.isBlank(origin[key].items.classPath)) {
+          this.addExtraViewNames(origin[key].items.classPath)
+        } else if (!tool.isBlank(origin[key].classPath)) {
+          this.addExtraViewNames(origin[key].classPath)
         }
       }
-
-      if (tool.isArray(customs)) {
-        for (var i = 0; i < customs.length; i++) {
-          /* 内建字段中不存在的，一律视为扩展字段 */
-          var innerField = null
-          for (var keyr in result) {
-            if (customs[i].field === keyr) {
-              innerField = result[keyr]
-              break
-            }
-          }
-          if (!innerField) {
-            result[customs[i].field] = Object.assign(
-              { type: 'string', fieldType: 'readonly', readonly: true },
-              result[customs[i].field]
-            )
-            innerField = result[customs[i].field]
-            Object.assign(innerField, { modifiable: true, custom: true })
-          }
-          Object.assign(innerField, {
-            'title': tool.ifBlank(customs[i].title, innerField.title || ''),
-            'position': tool.ifBlank(customs[i].position, innerField.position || ''),
-            'template': tool.ifBlank(customs[i].template, innerField.template || ''),
-            'pattern': tool.ifBlank(customs[i].pattern, innerField.pattern || ''),
-            'placerows': tool.ifBlank(customs[i].placerows, innerField.placerows || ''),
-            'placement': tool.ifBlank(customs[i].placement, innerField.placement || ''),
-            'listWidth': tool.ifBlank(customs[i].listWidth, innerField.listWidth || ''),
-            'listPosition': tool.ifBlank(customs[i].listPosition, innerField.listPosition || ''),
-            'description': tool.ifBlank(customs[i].description, innerField.description || '')
-          })
-        }
-      }
-      return this.sortFieldByPosition(result)
     },
 
     /**

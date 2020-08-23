@@ -6,12 +6,6 @@ const userRouter = {
   component: Layout,
   children: [
     {
-      path: 'todo',
-      component: () => import('@/views/todo/todoList'),
-      name: 'Todo',
-      meta: { title: '代办事项' }
-    },
-    {
       path: 'setting',
       component: () => import('@/views/user/setting/index'),
       name: 'Setting',

@@ -271,13 +271,9 @@ export default {
       var that = this
       document.addEventListener('visibilitychange', function() {
         if (document.hidden) {
-          if (that.$refs.searchbar !== undefined) {
+          if (that.$refs.searchbar) {
             that.$refs.searchbar.handleClear()
           }
-
-          // console.log('Browser tab is hidden')
-        } else {
-          // console.log('Browser tab is visible')
         }
       })
     },

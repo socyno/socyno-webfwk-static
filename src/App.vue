@@ -1,56 +1,36 @@
 <template>
   <div id="app">
     <router-view />
-    <BaseIframeDialog v-model="showBaseIframe" :options="iframeOptions" />
   </div>
 </template>
 <script>
-import tool from '@/utils/tools'
+// import tool from '@/utils/tools'
 import store from '@/store/index'
 import { info } from '@/apis/common'
-import BaseIframeDialog from '@/components/BaseIframeDialog'
 export default {
   components: {
-    BaseIframeDialog
-  },
-  data() {
-    return {
-      showBaseIframe: false,
-      iframeOptions: {}
-    }
+
   },
   created() {
     this.$store.dispatch('user/initUserInfo')
   },
   mounted() {
-    this.initIframeDialog()
-    window.$versionConvertByNum = function(num) {
-      var version = tool.stringify(num)
-      if (!version.match(/^\d+$/)) {
-        return num
-      }
-      version = tool.leftPad(version, 16, 0)
-      var startIndex = version.length - 12
-      return [
-        version.slice(0, startIndex),
-        version.slice(startIndex, startIndex + 4),
-        version.slice(startIndex + 4, startIndex + 8),
-        version.slice(startIndex + 8, startIndex + 12)
-      ].map(tool.parseInteger).join('.')
-    }
+    // window.$versionConvertByNum = function(num) {
+    //   var version = tool.stringify(num)
+    //   if (!version.match(/^\d+$/)) {
+    //     return num
+    //   }
+    //   version = tool.leftPad(version, 16, 0)
+    //   var startIndex = version.length - 12
+    //   return [
+    //     version.slice(0, startIndex),
+    //     version.slice(startIndex, startIndex + 4),
+    //     version.slice(startIndex + 4, startIndex + 8),
+    //     version.slice(startIndex + 8, startIndex + 12)
+    //   ].map(tool.parseInteger).join('.')
+    // }
   },
   methods: {
-    initIframeDialog() {
-      var that = this
-      window.$openIframeDialog = function(options) {
-        that.showBaseIframe = true
-        that.iframeOptions = options || {}
-      }
-
-      window.$closeIframeDialog = function() {
-        that.showBaseIframe = false
-      }
-    },
     loadSystemInfo() {
       info().then(res => {
         if (!res.data.initialized) {

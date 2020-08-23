@@ -1,13 +1,13 @@
 <template>
-  <el-popover v-if="tooltip && !fieldModel.contentip && fieldModel.description" placement="top-start" width="400" trigger="hover">
-    <!-- eslint-disable-next-line vue/no-v-html -->
-    <div v-html="fieldModel.description" />
-    <span slot="reference">
+  <el-tooltip v-if="tooltip && fieldModel.description" effect="light" placement="right">
+    <span>
       {{ fieldModel.title }}
       <i class="el-icon-question" />
       <span v-if="!withoutColon && !fieldModel.titleWithoutColon">：</span>
     </span>
-  </el-popover>
+    <!-- eslint-disable-next-line vue/no-v-html -->
+    <div slot="content" v-html="fieldModel.description" />
+  </el-tooltip>
   <span v-else>{{ fieldModel.title }}<span v-if="!withoutColon && !fieldModel.titleWithoutColon">：</span></span>
 </template>
 <script>

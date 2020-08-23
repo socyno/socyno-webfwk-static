@@ -52,7 +52,6 @@ export default {
             'toolManager.hoverDelay': 100, // tooltip提示显示延时
             'toolManager.toolTipDuration': 100000, // tooltip持续显示时间
             'isReadOnly': true, // 只读
-            'grid.visible': false, // 显示网格
             'linkingTool.direction': go.LinkingTool.ForwardsOnly,
             layout: MAKE(go.LayeredDigraphLayout, { isInitial: true, isOngoing: true, layerSpacing: 50 })
           })
@@ -75,7 +74,7 @@ export default {
           { curve: go.Link.Bezier, toShortLength: 15 },
           new go.Binding('curviness', 'curviness'),
           MAKE(go.Shape,
-            { stroke: '#2F4F4F', strokeWidth: 1.0 }),
+            { stroke: '#2F4F4F', strokeWidth: 2.0 }),
           MAKE(go.Shape,
             { toArrow: 'kite', fill: '#4f2f2f', stroke: null, scale: 1.5 })
         )

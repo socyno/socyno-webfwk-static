@@ -86,7 +86,7 @@ export default {
   },
   watch: {
     fromIndex: {
-      handler(fromIndex) {
+      handler: function(fromIndex) {
         this.loadFormLogs()
       }
     }

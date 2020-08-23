@@ -28,7 +28,7 @@ export default {
     }
   },
   watch: {
-    '$route'(to, from) {
+    '$route': function(to, from) {
       this.resetData()
     }
   },

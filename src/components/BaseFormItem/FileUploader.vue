@@ -72,7 +72,7 @@ export default {
   watch: {
     value: {
       immediate: true,
-      handler(newValue) {
+      handler: function(newValue) {
         this.resultFiles = []
         if (newValue) {
           // console.log('附件初始化清单数据如下：', newValue)

@@ -21,6 +21,7 @@
             :form-name="formName"
             :form-model="formModel"
             :default-data="props.row"
+            :show-all-fields="showAllFields"
           />
         </template>
       </el-table-column>
@@ -29,8 +30,9 @@
         :key="idx"
         :label="field.title"
         :prop="field.key"
+        :resizable="columnResizeable"
         :show-overflow-tooltip="showOverflowTooltip"
-        :width="field.listWidth ? field.listWidth : 0"
+        :width="field.listWidth > 0 ? field.listWidth : 0"
       >
         <template v-slot:default="{ row, column, $index }">
           <TemplateConfig
@@ -44,7 +46,13 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column v-if="rowActions && rowActions.length > 0" class="basic-form-list-actpane" label="操作">
+      <el-table-column
+        v-if="rowActions && rowActions.length > 0"
+        class="basic-form-list-actpane"
+        label="操作"
+        :width="actionsColumnWidth > 0 ? actionsColumnWidth : 0"
+        :resizeable="columnResizeable"
+      >
         <template slot-scope="scope">
           <slot v-for="(action) in rowActions">
             <el-button
@@ -115,9 +123,9 @@ export default {
         return []
       }
     },
-    rowActionsData: {
-      type: Object,
-      default: null
+    actionsColumnWidth: {
+      type: Number,
+      default: 0
     },
     formName: {
       type: String,
@@ -126,6 +134,18 @@ export default {
     showOverflowTooltip: {
       type: Boolean,
       default: true
+    },
+    columnResizeable: {
+      type: Boolean,
+      default: true
+    },
+    /**
+     * 是否在展开的表单中显示所有字段
+     * （包括被明确标记隐藏的字段）
+     */
+    showAllFields: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -138,7 +158,7 @@ export default {
   watch: {
     columns: {
       immediate: true,
-      handler(columns) {
+      handler: function(columns) {
         this.formModel = null
         this.fieldModels = []
         // console.log('表格视图模型 => ', columns)
@@ -146,7 +166,11 @@ export default {
           this.fieldModels = columns
         } else if (tool.isPlainObject(columns)) {
           this.formModel = parseFormClass(columns)
-          this.fieldModels = getVisibleFieldModels(columns, FORM_FIELD_OPTIONS.ListFirst | FORM_FIELD_OPTIONS.OrderUndefinedExcluded)
+          this.fieldModels = getVisibleFieldModels(
+            columns,
+            FORM_FIELD_OPTIONS.ListFirst |
+                FORM_FIELD_OPTIONS.OrderUndefinedExcluded
+          )
           // console.log('流程表单的列表字段模型定义解析结果如下：', this.fieldModels)
         }
       }
@@ -163,6 +187,7 @@ export default {
      * @param {Object} field
      */
     getFieldValueDisplay(fieldModel, fieldValue) {
+      // console.log(fieldModel.key, fieldValue, fieldModel)
       return getFieldValueDisplay(fieldModel, fieldValue)
     },
 

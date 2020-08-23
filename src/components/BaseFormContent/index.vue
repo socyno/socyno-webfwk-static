@@ -1,12 +1,11 @@
 <template>
   <BaseFormContentBase
+    ref="baseFormContent"
     :editable="editable"
     :collapsible="collapsible"
     :field-models="fieldModelsEx"
   >
     <template v-slot:content="{ field }">
-      <!-- eslint-disable-next-line vue/no-v-html -->
-      <div v-if="field.contentip === 'top' && field.description" v-html="field.description" />
       <!-- 内嵌的表单 -->
       <div v-if="field.comType === 'innerForm'">
         <BaseFormContent
@@ -21,6 +20,7 @@
           :default-data="vitem"
           :editable="editable && innerEditable && !field.readonly"
           :collapsible="innerCollapsible"
+          :show-form-error="false"
         />
       </div>
       <!-- 长文本本显示 -->
@@ -30,8 +30,9 @@
           v-model="field.value"
           size="mini"
           type="textarea"
+          :readonly="!editable || field.readonly"
           :rows="field.placerows > 0 ? field.placerows : 3"
-          :placeholder="'请输入' + field.title"
+          :placeholder="getPlaceholder(field)"
           @input="$forceUpdate()"
         />
         <TemplateConfig
@@ -39,6 +40,14 @@
           :template="field.template"
           :field-model="field"
           :form-data="defaultData"
+        />
+        <el-input
+          v-else-if="field.readonlyAsEditor === 'yes'"
+          v-model="field.value"
+          size="mini"
+          type="textarea"
+          :readonly="true"
+          :rows="field.placerows > 0 ? field.placerows : 3"
         />
         <pre v-else>{{ getTextDisplay(field) }}</pre>
       </div>
@@ -72,6 +81,7 @@
           :editable="editable && !field.readonly"
           :field-model="field"
           :parent-field-models="parentFieldModelsConcat()"
+          :placeholder="getPlaceholder(field)"
         />
       </div>
       <!-- 动态下拉单选框场景 -->
@@ -83,12 +93,21 @@
           :form-name="formName"
           :field-model="field"
           :parent-field-models="parentFieldModelsConcat()"
+          :placeholder="getPlaceholder(field)"
         />
         <TemplateConfig
           v-else-if="field.template"
           :template="field.template"
           :field-model="field"
           :form-data="defaultData"
+        />
+        <DynamicSingleSelector
+          v-else-if="field.readonlyAsEditor === 'yes'"
+          v-model="field.value"
+          :form-id="formId"
+          :editable="false"
+          :form-name="formName"
+          :field-model="field"
         />
         <div v-else>
           {{ getTextDisplay(field) }}
@@ -108,6 +127,13 @@
           :field-model="field"
           :form-data="defaultData"
         />
+        <el-input
+          v-else-if="(!editable || field.readonly) && field.readonlyAsEditor === 'yes'"
+          v-model="field.value"
+          size="mini"
+          type="text"
+          :readonly="true"
+        />
         <el-tooltip
           v-else-if="(!editable || field.readonly)"
           effect="dark"
@@ -122,7 +148,7 @@
           v-model="field.value"
           size="mini"
           type="password"
-          :placeholder="'请输入' + field.title"
+          :placeholder="getPlaceholder(field)"
           @input="$forceUpdate()"
         />
         <!-- 静态单选 -->
@@ -130,7 +156,7 @@
           v-else-if="field.comType === 'select'"
           v-model="field.value"
           size="mini"
-          :placeholder="'请选择' + field.title"
+          :placeholder="getPlaceholder(field)"
           :clearable="true"
           @change="$forceUpdate()"
         >
@@ -160,35 +186,36 @@
           @change="$forceUpdate()"
         />
         <!-- 日期选择 -->
-        <el-date-picker
+        <Datetime
           v-else-if="field.comType === 'DateOnly'"
           v-model="field.value"
-          size="mini"
-          placeholder="请选择日期"
-          format="yyyy-MM-dd"
-          value-format="yyyy-MM-dd"
           type="date"
-          @input="$forceUpdate()"
-        />
-        <!-- 日期和时间选择 -->
-        <el-date-picker
-          v-else-if="field.comType === 'DateTime'"
-          v-model="field.value"
-          size="mini"
-          placeholder="请选择日期"
-          format="yyyy-MM-dd HH:mm:ss"
-          value-format="yyyy-MM-dd HH:mm:ss"
-          type="datetime"
+          input-format="YYYY-MM-DD"
+          :placeholder="getPlaceholder(field)"
+          :i18n="{ok:'确定', cancel:'取消'}"
+          :auto-close="true"
           @input="$forceUpdate()"
         />
         <!-- 时间选择 -->
-        <el-time-picker
+        <Datetime
           v-else-if="field.comType === 'TimeOnly'"
           v-model="field.value"
-          size="mini"
-          placeholder="请选择时间"
-          format="HH:mm:ss"
-          value-format="HH:mm:ss"
+          type="time"
+          input-format="HH:mm"
+          :placeholder="getPlaceholder(field)"
+          :i18n="{ok:'确定', cancel:'取消'}"
+          @input="$forceUpdate()"
+        />
+        <!-- 日期和时间选择 -->
+        <Datetime
+          v-else-if="field.comType === 'DateTime'"
+          v-model="field.value"
+          type="datetime"
+          input-format="YYYY-MM-DD HH:mm"
+          :placeholder="getPlaceholder(field)"
+          :i18n="{ok:'确定', cancel:'取消'}"
+          :auto-continue="true"
+          :auto-close="false"
           @input="$forceUpdate()"
         />
         <!-- 分隔线: 分割线无需绘制，在 label 中体现 -->
@@ -198,25 +225,27 @@
           v-else
           v-model="field.value"
           size="mini"
-          :placeholder="'请输入' + (field.title || '')"
+          :placeholder="getPlaceholder(field)"
           :type="field.type === 'integer' ? 'number' : 'text'"
           @input="$forceUpdate()"
         />
       </div>
-      <!-- eslint-disable-next-line vue/no-v-html -->
-      <div v-if="field.contentip === 'bottom' && field.description" v-html="field.description" />
     </template>
     <template v-slot:after>
-      <div v-if="actions && actions.length > 0" class="form-content-buttons">
-        <el-button v-for="(item, index) in actions" :key="`form-action-${index}`" :type="item.type || 'primary'" :size="item.size || 'mini'" @click="$emit('actions', item)">
-          {{ item.name || item.title || item.dispaly }}
-        </el-button>
+      <div class="form-content-buttons">
+        <pre v-if="showFormError" style="padding:0; margin:0;color:orangered;">{{ formDataValidation(true) }}</pre>
+        <div v-if="actions && actions.length > 0">
+          <el-button v-for="(item, index) in actions" :key="`form-action-${index}`" :type="item.type || 'primary'" :size="item.size || 'mini'" @click="$emit('actions', item)">
+            {{ item.name || item.title || item.dispaly }}
+          </el-button>
+        </div>
       </div>
     </template>
   </BaseFormContentBase>
 </template>
 <script>
 import tool from '@/utils/tools'
+import { Datetime } from 'vue-datetime'
 import FileUploader from '@/components/BaseFormItem/FileUploader'
 import TemplateConfig from '@/components/BaseFormItem/TemplateConfig'
 import DynamicSingleSelector from '@/components/BaseFormItem/DynamicSingleSelector'
@@ -228,6 +257,7 @@ export default {
   components: {
     FileUploader,
     TemplateConfig,
+    Datetime,
     DynamicSingleSelector,
     DynamicMultipleCreator,
     DynamicMultipleSelector,
@@ -307,6 +337,20 @@ export default {
       default: false
     },
     /**
+     * 是否显示所有的字段（包括隐藏字段）
+     */
+    showAllFields: {
+      type: Boolean,
+      default: false
+    },
+    /**
+     * 是否显示表单的校验提示
+     */
+    showFormError: {
+      type: Boolean,
+      default: true
+    },
+    /**
      * 自定义的操作按钮
      */
     actions: {
@@ -320,11 +364,67 @@ export default {
     }
   },
   computed: {
+    formValidationFunction() {
+      if (tool.isBlank(this.formModel.formValidation)) {
+        return null
+      }
+      try {
+        return new Function('formData', this.formModel.formValidation)
+      } catch (e) {
+        console.error('Form validation function initialize failed: ', e)
+      }
+      return null
+    },
+    formDynamicChangedFunction() {
+      if (tool.isBlank(this.formModel.formDynamicChanged)) {
+        return null
+      }
+      try {
+        return new Function('fieldModels', 'formData', '$o',
+          this.formModel.formDynamicChanged)
+      } catch (e) {
+        console.error('Form change function initialize failed: ', e)
+      }
+      return null
+    },
     fieldModelsEx() {
       return this.getVisibleFieldModels(this.formModel, this.defaultData)
     }
   },
+  mounted() {
+    this.formDataValidation(true)
+  },
   methods: {
+    getPlaceholder(field) {
+      if (!tool.isBlank(field.placeholder)) {
+        return field.placeholder
+      }
+      let defaultPlaceholder = ''
+      switch (field.comType) {
+        case 'DateTime':
+          defaultPlaceholder = '请选择时间'
+          break
+        case 'TimeOnly':
+          defaultPlaceholder = '请选择时间'
+          break
+        case 'DateOnly':
+          defaultPlaceholder = '请选择日期'
+          break
+        case 'select':
+          defaultPlaceholder = '请选择' + field.title
+          break
+        case 'tableView':
+          defaultPlaceholder = '可输入关键词进行动态筛选'
+          break
+        case 'dynamicSelect':
+          defaultPlaceholder = '可输入关键词进行动态筛选'
+          break
+        default:
+          defaultPlaceholder = ('请输入' + (field.title || ''))
+      }
+      return defaultPlaceholder
+    },
+
     /**
      * 解析可显示的字段模型清单
      *
@@ -339,6 +439,9 @@ export default {
       var options = FORM_FIELD_OPTIONS.SeparatorIncluded |
                      FORM_FIELD_OPTIONS.HiddenIfAllEmpty |
                      FORM_FIELD_OPTIONS.OrderUndefinedExcluded
+      if (this.showAllFields === true) {
+        options = FORM_FIELD_OPTIONS.All
+      }
       this.fieldModels = []
       if (tool.isPlainObject(formModel)) {
         this.fieldModels = getVisibleFieldModels(formModel, formData, options)
@@ -353,61 +456,126 @@ export default {
       if (!fieldModel) {
         return ''
       }
-      return '' + getFieldValueDisplay(fieldModel, fieldModel.value)
+      // console.log('获取字段的显示文本: ', fieldModel.key , ' => ', fieldModel)
+      return tool.stringify(getFieldValueDisplay(fieldModel, fieldModel.value))
     },
 
     /**
      * 获取表单的验证内容
      */
     getFormValidData() {
-      var validation = function(field) {
-        if (field.required) {
-          if (tool.isUndefOrNull(field.value) ||
-            (field.type === 'array' && field.value.length <= 0) ||
-            (tool.isString(field.value) && tool.isBlank(field.value))) {
-            this.$notify.error(`字段(${field.title})要求必须填写`)
-            return false
-          }
-        }
-        if (field.pattern && (tool.isNumber(field.value) || tool.isString(field.value))) {
-          var regexp
-          try {
-            regexp = new RegExp(field.pattern)
-          } catch (e) {
-            this.$notify.error(`字段(${field.title})格式验证失败：非法的正则模式 - ${field.pattern}`)
-            return false
-          }
-          if (!regexp.test(field.value.toString())) {
-            this.$notify.error(`字段(${field.title})格式验证失败：要求的正则模式 - ${field.pattern}`)
-            return false
-          }
-        }
-        return true
+      var formData
+      if ((formData = this.formDataValidation())) {
+        return formData
       }
-      var data = {}
-      var validPassed = true
+      this.$notify.error(this.formDataValidation(true))
+      return null
+    },
+
+    /**
+     * 表单内容整体验证脚本的执行
+     */
+    formDataValidation(messageOnly) {
+      if (!this.$refs.baseFormContent) {
+        return messageOnly ? '' : null
+      }
+      var formData = {}
+      var fieldErrors = []
+      var errorMessages = ''
+      var mappedFieldModels = {}
       for (const field of this.fieldModels) {
+        mappedFieldModels[field.key] = field
         if (field.comType === 'innerForm' && !field.readonly && this.innerEditable) {
           var fieldValues = []
           if (this.$refs[`InnerForm:${field.key}`]) {
             for (var innerForm of this.$refs[`InnerForm:${field.key}`]) {
-              var innerData = innerForm.getFormValidData()
-              if (!innerData) {
-                return null
+              var innerData
+              if (!(innerData = innerForm.formDataValidation())) {
+                errorMessages = innerForm.formDataValidation(true)
+              } else {
+                fieldValues.push(innerData)
               }
-              fieldValues.push(innerData)
             }
           }
           field.value = fieldValues
         }
-        if (!validation.call(this, field)) {
-          validPassed = false
-          break
+        if (this.editable && !field.readonly) {
+          if (field.comType === 'DateOnly') {
+            field.value = tool.formatUtcDateTime(field.value, 'date')
+          } else if (field.comType === 'DateTime') {
+            field.value = tool.formatUtcDateTime(field.value)
+          } else if (field.comType === 'TimeOnly') {
+            field.value = tool.formatUtcDateTime(field.value, 'time')
+          }
         }
-        data[field.key] = field.value
+        if (field.dynamicSelectedEditable && tool.isArray(field.value)) {
+          for (var v of field.value) {
+            v['__skip_option_value_convert__'] = true
+          }
+        }
+        if (this.$refs.baseFormContent.showFieldErrorMsg(field)) {
+          fieldErrors.push(field)
+        } else {
+          formData[field.key] = field.value
+        }
       }
-      return validPassed ? data : null
+      if (fieldErrors && fieldErrors.length > 0) {
+        var curerrors = 0
+        var maxerrors = 3
+        errorMessages = '表单字段填写不符合要求, 错误信息如下:'
+        while (curerrors < maxerrors) {
+          if (curerrors >= fieldErrors.length) {
+            break
+          }
+          var field = fieldErrors[curerrors++]
+          errorMessages += `\n字段[${field.title}]: ${field.errormsg}`
+        }
+        if (fieldErrors.length > maxerrors) {
+          errorMessages += '\n...'
+        }
+      }
+      /**
+       *  执行表单内容验证脚本
+       */
+      if (!tool.isBlank(this.formModel.formValidation)) {
+        if (!tool.isFunction(this.formValidationFunction)) {
+          errorMessages = '表单内容验证配置异常: 脚本初始化失败, 请联系系统管理员'
+        } else {
+          var formErrorMsg = null
+          try {
+            formErrorMsg = this.formValidationFunction.call(tool, formData)
+          } catch (e) {
+            console.error(e)
+            formErrorMsg = '表单内容验证配置异常: 脚本执行失败, 请联系系统管理员'
+          }
+          if (!tool.isString(formErrorMsg)) {
+            formErrorMsg = '表单内容验证配置异常: 脚本要求返回字符串, 请联系系统管理员'
+          }
+          if (!tool.isBlank(formErrorMsg)) {
+            errorMessages = '表单内容验证失败: ' + formErrorMsg
+          }
+        }
+      }
+      /**
+       *  执行表单内容变更脚本
+       */
+      if (!tool.isBlank(this.formModel.formDynamicChanged)) {
+        if (!tool.isFunction(this.formDynamicChangedFunction)) {
+          errorMessages = '表单内容变更配置异常: 脚本初始化失败, 请联系系统管理员'
+        } else {
+          try {
+            this.formDynamicChangedFunction(mappedFieldModels, formData, {
+              'tool': tool
+            })
+          } catch (e) {
+            console.error(e)
+            errorMessages = '表单内容变更配置异常: 脚本执行失败, 请联系系统管理员'
+          }
+        }
+      }
+      return messageOnly ? errorMessages : formData
     },
+
     /**
      * 整合级联产生的父表单模型
      */
@@ -447,6 +615,9 @@ export default {
   .form-content-buttons {
     padding: 5px 50px;
     text-align: center;
+  }
+  .vdatetime-popup__month-selector {
+    padding: 0px !important;
   }
 }
 </style>

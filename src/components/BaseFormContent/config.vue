@@ -1,6 +1,7 @@
 <template>
   <div>
     <BaseFormContentBase
+      ref="parentFormContent"
       :draggable="true"
       :show-all="true"
       :field-models="cachedFieldModels"
@@ -8,8 +9,8 @@
       @fieldWrapperClick="showFieldSettings"
     >
       <template v-slot:before>
-        <el-table id="form-list-heads" @header-click="showColumnSettings">
-          <template v-slot:empty="{ }">
+        <el-table id="form-list-heads" ref="formListHeads" @header-click="showColumnSettings">
+          <template v-slot:empty>
             &nbsp;
           </template>
           <el-table-column
@@ -26,7 +27,7 @@
             </template>
           </el-table-column>
           <el-table-column :width="50">
-            <template v-slot:header="{ }">
+            <template v-slot:header>
               <i class="el-icon-plus" />
             </template>
           </el-table-column>
@@ -35,6 +36,7 @@
         <el-drawer
           direction="rtl"
           :visible.sync="columnSettingsVisible"
+          :size="'40%'"
           :with-header="false"
           :append-to-body="true"
           :modal-append-to-body="true"
@@ -91,12 +93,14 @@
         <el-drawer
           direction="rtl"
           :visible.sync="settingsVisible"
+          :size="'40%'"
           :with-header="false"
+          custom-class="form-field-settings"
           :append-to-body="true"
           :modal-append-to-body="true"
           @close="closeFieldSettings"
         >
-          <el-form label-position="right" label-width="150px" size="mini" style="padding:30px;">
+          <el-form label-position="right" label-width="150px" size="mini" style="padding:20px;">
             <el-form-item v-if="settingsFeild.custom" label="字段操作">
               <el-button v-if="settingsForCreation" type="primary" size="mini" @click="addCustomField(settingsFeild)">
                 保存
@@ -115,13 +119,13 @@
             <el-form-item v-if="settingsFeild.custom" label="字段类型">
               <el-select v-model="settingsFeild.fieldType" size="mini" @change="onFieldTypeChange">
                 <el-option label="分隔线" value="separator" />
-                <el-option label="自定义模板显示" value="template" />
+                <el-option label="自定义" value="template" />
                 <el-option label="以下所有字段将被隐藏" value="hidden" />
                 <el-option label="上方字段隐藏的结束符" value="hiddenEnd" />
                 <el-option label="以下字段值全为空时被隐藏" value="hiddenIfAllEmpty" />
               </el-select>
             </el-form-item>
-            <el-form-item v-if="settingsFeild.fieldType !== 'template'" label="显示控件">
+            <el-form-item label="显示控件">
               {{ settingsFeild.comType }}
             </el-form-item>
             <el-form-item v-if="!settingsFeild.hiddenCtl" label="标题显示">
@@ -166,26 +170,96 @@
                 <el-option label="12/12" :value="12" />
               </el-select>
             </el-form-item>
-            <el-form-item v-if="!settingsFeild.separator && settingsFeild.fieldType !== 'template'" label="内容高度">
+            <el-form-item v-if="!settingsFeild.separator">
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    内容高度
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre>
+设置内容区的高度，目前只支持设置文本编辑框的默认显示行数
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
               <el-input
                 v-model="settingsFeild.placerows"
                 type="number"
                 size="mini"
               />
             </el-form-item>
-            <el-form-item v-if="!settingsFeild.separator && settingsFeild.fieldType !== 'template' && (settingsFeild.custom || settingsFeild.modifiable)" label="可否编辑">
-              <el-switch
-                v-model="settingsFeild.editable"
+            <el-form-item v-if="!settingsFeild.separator">
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    只读控件模式
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre>
+选择是，则表示在只读场景下，以只读的编辑控件的方式展示
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
+              <el-select v-model="settingsFeild.readonlyAsEditor" size="mini">
+                <el-option label="否" value="no" />
+                <el-option label="是" value="yes" />
+              </el-select>
+            </el-form-item>
+            <el-form-item v-if="!settingsFeild.separator && checkVisibleComType(settingsFeild)">
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    输入框提示语
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre>
+设置输入框内的提示语，动态设置placeholder的值
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
+              <el-input
+                v-model="settingsFeild.placeholder"
+                type="text"
                 size="mini"
               />
             </el-form-item>
-            <el-form-item v-if="!settingsFeild.separator && settingsFeild.fieldType !== 'template' && (settingsFeild.custom || settingsFeild.modifiable)" label="是否必填">
+            <el-form-item v-if="!settingsFeild.separator && (settingsFeild.custom || settingsFeild.modifiable)" label="可否只读">
+              <el-switch
+                v-model="settingsFeild.readonly"
+                size="mini"
+              />
+            </el-form-item>
+            <el-form-item v-if="!settingsFeild.separator && (settingsFeild.custom || settingsFeild.modifiable)" label="是否必填">
               <el-switch
                 v-model="settingsFeild.required"
                 size="mini"
               />
             </el-form-item>
-            <el-form-item v-if="!settingsFeild.separator && settingsFeild.fieldType !== 'template'" label="校验模式">
+            <el-form-item v-if="!settingsFeild.separator">
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    校验模式
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre slot="content">
+填写内容的格式验证模式（<a style="color: red;" target="_blank" href="https://www.runoob.com/jsref/jsref-obj-regexp.html">正则表达式形式</a>）。
+格式验证将在前后端同时执行，因此必须确保编写的正则表达式兼容 JS 和 Java 的规范
+常用模式参考如下：
+1）限制长度 &gt;=10   : ^.{10,}$
+2）限制长度 &lt;=500  : ^.{0,500}$
+3）限制为英文字母或数字 ： ^[a-zA-z0-9]+$
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
               <el-input
                 v-model="settingsFeild.pattern"
                 type="textarea"
@@ -193,7 +267,41 @@
                 size="mini"
               />
             </el-form-item>
-            <el-form-item v-if="!settingsFeild.separator" label="字段描述">
+            <el-form-item v-if="!settingsFeild.separator">
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    模式校验告警
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre slot="content">
+当上述的内容正则模式校验失败时，显示此处配置的提示内容
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
+              <el-input
+                v-model="settingsFeild.patternFailureWarn"
+                type="textarea"
+                rows="2"
+                size="mini"
+              />
+            </el-form-item>
+            <el-form-item v-if="!settingsFeild.separator">
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    描述(帮助)
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre slot="content">
+字段的填写帮助或相关说明, 显示在标题<span style="color:red">帮助</span>，支持 HTML 格式.
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
               <el-input
                 v-model="settingsFeild.description"
                 type="textarea"
@@ -201,9 +309,96 @@
                 size="mini"
               />
             </el-form-item>
-            <el-form-item v-if="!settingsFeild.separator" label="内容模板">
+            <el-form-item v-if="!settingsFeild.separator">
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    描述(顶部)
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre slot="content">
+字段的填写帮助或相关说明, 显示在内容<span style="color:red">顶部</span>，支持 HTML 格式.
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
+              <el-input
+                v-model="settingsFeild.brightHelpTop"
+                type="textarea"
+                rows="3"
+                size="mini"
+              />
+            </el-form-item>
+            <el-form-item v-if="!settingsFeild.separator">
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    描述(底部)
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre slot="content">
+字段的填写帮助或相关说明, 显示在内容<span style="color:red">底部</span>，支持 HTML 格式.
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
+              <el-input
+                v-model="settingsFeild.brightHelpBottom"
+                type="textarea"
+                rows="3"
+                size="mini"
+              />
+            </el-form-item>
+            <el-form-item v-if="!settingsFeild.separator">
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    内容模板
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre slot="content">
+内容显示模板, 以 <a style="color:red" href="https://www.layui.com/doc/modules/laytpl.html" target="_blank">laytpl</a> 渲染(). 数据内容为:
+{
+  key     : &lt;字段名&gt;,
+  title   : &lt;字段标题&gt;,
+  value   : &lt;字段值&gt;,
+  data    : &lt;表单或行数据&gt;,
+  /* 如为静态可选类型 */
+  staticOptions: &lt;静态可选项&gt;
+}
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
               <el-input
                 v-model="settingsFeild.template"
+                type="textarea"
+                rows="3"
+                size="mini"
+              />
+            </el-form-item>
+            <el-form-item>
+              <template slot="label">
+                <el-tooltip placement="left" effect="light">
+                  <span>
+                    字段标签
+                    <i class="el-icon-question" />
+                  </span>
+                  <template slot="content">
+                    <pre slot="content">
+给字段打上特定的标签，标签允许任意字符，以空白/逗号/分号作为分隔符。
+通常可配合内容变更脚本使用，如通过标签对字段分组，在表单某个选项值
+发生变化时，可在变更脚本中通过标签来识别字段将其标记为隐藏（或显示），
+只读或可编辑等等。
+                    </pre>
+                  </template>
+                </el-tooltip>
+              </template>
+              <el-input
+                v-model="settingsFeild.scriptTags"
                 type="textarea"
                 rows="3"
                 size="mini"
@@ -256,7 +451,7 @@ export default {
   watch: {
     fieldModels: {
       immediate: true,
-      handler(newFieldModels, oldFieldModels) {
+      handler: function(newFieldModels, oldFieldModels) {
         this.cachedFieldModels = tool.jsonCopy(newFieldModels)
         this.resetCachedColumnFields()
         this.$nextTick(() => {
@@ -267,7 +462,7 @@ export default {
       }
     },
     cachedFieldColumns: {
-      handler(newFieldColumns, oldFieldColumns) {
+      handler: function(newFieldColumns, oldFieldColumns) {
         this.$nextTick(() => {
           setTimeout(() => {
             this.registerDragEventListener()
@@ -277,22 +472,43 @@ export default {
       }
     }
   },
+  beforeDestroy() {
+    this.removeDragEventListener()
+  },
   methods: {
     /**
-     *  获取表头布局排版 DOM 对象
+     *  根据字段的comType属性检验是否支持配置placeholder
      */
-    getHeadLayoutElement() {
-      return document.getElementById(
-        'form-list-heads'
-      ).getElementsByTagName('tr')[0]
+    checkVisibleComType(settingsFeild) {
+      if (tool.isNullOrUndef(settingsFeild)) {
+        return false
+      }
+      const comType = settingsFeild.comType
+      if (tool.isBlank(comType)) {
+        return false
+      }
+      if (comType === 'file' || comType === 'innerForm') {
+        return false
+      }
+      return true
     },
     /**
-     *  获取表头布局排版 DOM 组对象
+     * 获取表头布局排版 DOM 对象
+     */
+    getFormListHeadsWrapper() {
+      return this.$refs.formListHeads.$el
+    },
+    /**
+     * 获取表头布局排版 DOM 对象
+     */
+    getHeadLayoutElement() {
+      return this.getFormListHeadsWrapper().getElementsByTagName('tr')[0]
+    },
+    /**
+     * 获取表头布局排版 DOM 组对象
      */
     getCurrentGroupColumn(column) {
-      for (var colgroup of document.getElementById(
-        'form-list-heads'
-      ).getElementsByTagName('col')) {
+      for (var colgroup of this.getFormListHeadsWrapper().getElementsByTagName('col')) {
         var colclazz = column.className
         var colname = colgroup.getAttribute('name')
         if (colclazz.indexOf(colname) >= 0) {
@@ -301,7 +517,7 @@ export default {
       }
     },
     /**
-     *  获取当前 DOM 所在列 DOM 对象
+     * 获取当前 DOM 所在列 DOM 对象
      */
     getCurrentHeadElement(elm, wrapper) {
       while (elm && wrapper.contains(elm)) {
@@ -312,95 +528,145 @@ export default {
       }
       return null
     },
+
+    /**
+     * 列表头的拖拽事件处理函数
+     */
+    eventTableDragEnter(e) {
+      var sourceField
+      var targetField
+      var formHeads = this.getHeadLayoutElement()
+      if (!(targetField = this.getCurrentHeadElement(e.target, formHeads)) ||
+              !(sourceField = this.headDraggedStore.sourceField) ||
+              targetField === sourceField ||
+              targetField === this.headDraggedStore.targetFeild) {
+        return
+      }
+      this.resetPrevDropTargetStyle(targetField)
+    },
+    eventTableDragOver(e) {
+      e.preventDefault()
+      var sourceField
+      var targetField
+      var formHeads = this.getHeadLayoutElement()
+      if (!(targetField = this.getCurrentHeadElement(e.target, formHeads)) ||
+          !(sourceField = this.headDraggedStore.sourceField) ||
+          targetField === sourceField) {
+        return
+      }
+      this.resetPrevDropTargetStyle()
+      var targetRect = this.getFieldElementRectInfo(targetField)
+      if (e.clientX > ((targetRect.right - targetRect.left) / 2 + targetRect.left)) {
+        targetField.style.borderRight = '3px dotted green'
+        this.headDraggedStore['targetDirection'] = 'after'
+      } else {
+        targetField.style.borderLeft = '3px dotted green'
+        this.headDraggedStore['targetDirection'] = 'before'
+      }
+    },
+    eventTableDragDrop(e) {
+      e.preventDefault()
+      var targetField
+      var sourceField
+      this.resetPrevDropTargetStyle()
+      if (!(targetField = this.headDraggedStore.targetFeild) ||
+          !(sourceField = this.headDraggedStore.sourceField) ||
+          targetField === sourceField) {
+        return
+      }
+      var sourceGroup = this.getCurrentGroupColumn(sourceField)
+      var targetGroup = this.getCurrentGroupColumn(targetField)
+      if (this.headDraggedStore.targetDirection === 'after') {
+        tool.propAfter(targetField).after(sourceField)
+        tool.propAfter(targetGroup).after(sourceGroup)
+      } else {
+        tool.propBefore(targetField).before(sourceField)
+        tool.propBefore(targetGroup).before(sourceGroup)
+      }
+      this.$nextTick(() => {
+        this.resetColumnFieldsOrder()
+      })
+    },
+    eventTableDragStart(e) {
+      var sourceField
+      var formHeads = this.getHeadLayoutElement()
+      if (!(sourceField = this.getCurrentHeadElement(e.target, formHeads))) {
+        return
+      }
+      this.headDraggedStore = {
+        sourceField: sourceField,
+        sourceBorder: sourceField.style.border,
+        sourceBorderLeft: sourceField.style.borderLeft
+      }
+      sourceField.style.border = '1px dotted red'
+    },
+    eventTableDragEnd(e) {
+      this.headDraggedStore.sourceField.style.border =
+            this.headDraggedStore.sourceBorder
+      this.headDraggedStore.sourceField.style.borderLeft =
+            this.headDraggedStore.sourceBorderLeft
+      this.resetPrevDropTargetStyle()
+      this.headDraggedStore = {}
+    },
+
     /**
      * 注册列表头的 draggable 事件
      */
     registerDragEventListener() {
       var formHeads = this.getHeadLayoutElement()
-      formHeads.addEventListener('dragenter', (e) => {
-        var sourceField
-        var targetField
-        var formHeads = this.getHeadLayoutElement()
-        if (!(targetField = this.getCurrentHeadElement(e.target, formHeads)) ||
-                !(sourceField = this.headDraggedStore.sourceField) ||
-                targetField === sourceField ||
-                targetField === this.headDraggedStore.targetFeild) {
-          return
-        }
-        this.resetPrevDropTargetStyle(targetField)
-      })
-      formHeads.addEventListener('dragover', (e) => {
-        e.preventDefault()
-        var sourceField
-        var targetField
-        var formHeads = this.getHeadLayoutElement()
-        if (!(targetField = this.getCurrentHeadElement(e.target, formHeads)) ||
-            !(sourceField = this.headDraggedStore.sourceField) ||
-            targetField === sourceField) {
-          return
-        }
-        this.resetPrevDropTargetStyle()
-        var targetRect = this.getFieldElementRectInfo(targetField)
-        if (e.clientX > ((targetRect.right - targetRect.left) / 2 + targetRect.left)) {
-          targetField.style.borderRight = '3px dotted green'
-          this.headDraggedStore['targetDirection'] = 'after'
-        } else {
-          targetField.style.borderLeft = '3px dotted green'
-          this.headDraggedStore['targetDirection'] = 'before'
-        }
-      })
-      formHeads.addEventListener('drop', (e) => {
-        e.preventDefault()
-        var targetField
-        var sourceField
-        this.resetPrevDropTargetStyle()
-        if (!(targetField = this.headDraggedStore.targetFeild) ||
-            !(sourceField = this.headDraggedStore.sourceField) ||
-            targetField === sourceField) {
-          return
-        }
-        var sourceGroup = this.getCurrentGroupColumn(sourceField)
-        var targetGroup = this.getCurrentGroupColumn(targetField)
-        if (this.headDraggedStore.targetDirection === 'after') {
-          targetField.after(sourceField)
-          targetGroup.after(sourceGroup)
-        } else {
-          targetField.before(sourceField)
-          targetGroup.before(sourceGroup)
-        }
-        this.$nextTick(() => {
-          this.resetColumnFieldsOrder()
-        })
-      })
+      // console.log('Registering DragEventListener ...')
+      if (tool.isBlank(formHeads.getAttribute('draggable-added'))) {
+        formHeads.addEventListener('dragenter', this.eventTableDragEnter)
+        formHeads.addEventListener('dragover', this.eventTableDragOver)
+        formHeads.addEventListener('drop', this.eventTableDragDrop)
+        formHeads.setAttribute('draggable-added', 'true')
+      }
       for (var headElement of formHeads.children) {
         headElement.draggable = true
         headElement.style.borderLeft = '2px solid darkviolet'
         if (!tool.isBlank(headElement.getAttribute('draggable-added'))) {
           continue
         }
-        // console.log(headElement)
-        headElement.addEventListener('dragstart', (e) => {
-          var sourceField
-          var formHeads = this.getHeadLayoutElement()
-          if (!(sourceField = this.getCurrentHeadElement(e.target, formHeads))) {
-            return
-          }
-          this.headDraggedStore = {
-            sourceField: sourceField,
-            sourceBorder: sourceField.style.border,
-            sourceBorderLeft: sourceField.style.borderLeft
-          }
-          sourceField.style.border = '1px dotted red'
-        })
-        headElement.addEventListener('dragend', (e) => {
-          this.headDraggedStore.sourceField.style.border =
-                this.headDraggedStore.sourceBorder
-          this.headDraggedStore.sourceField.style.borderLeft =
-                this.headDraggedStore.sourceBorderLeft
-          this.resetPrevDropTargetStyle()
-          this.headDraggedStore = {}
-        })
+        headElement.addEventListener('dragstart', this.eventTableDragStart)
+        headElement.addEventListener('dragend', this.eventTableDragEnd)
         headElement.setAttribute('draggable-added', 'true')
+      }
+    },
+
+    /**
+     * 移除列表头的 draggable 事件
+     */
+    removeDragEventListener() {
+      var formHeads = this.getHeadLayoutElement()
+      // console.log('Removing All DragEventListener ...')
+      formHeads.removeEventListener('dragenter', this.eventTableDragEnter)
+      formHeads.removeEventListener('dragover', this.eventTableDragOver)
+      formHeads.removeEventListener('drop', this.eventTableDragDrop)
+      for (var headElement of formHeads.children) {
+        headElement.style.borderLeft = '2px solid darkviolet'
+        headElement.removeEventListener('dragstart', this.eventTableDragStart)
+        headElement.removeEventListener('dragend', this.eventTableDragEnd)
+        headElement.setAttribute('draggable-added', '')
+      }
+    },
+
+    /**
+     * 移除列表头单个字段的 draggable 事件
+     */
+    removeFieldDragEventListener(fieldKey) {
+      var formHeads = this.getHeadLayoutElement()
+      for (var headElement of formHeads.children) {
+        var fieldHeadElm = headElement.getElementsByClassName('form-list-head')
+        if (!fieldHeadElm || fieldHeadElm.length <= 0) {
+          continue
+        }
+        if (fieldHeadElm[0].getAttribute('form-list-field') === fieldKey) {
+          console.log('Removing Field DragEventListener ... ', fieldKey)
+          headElement.removeEventListener('dragstart', this.eventTableDragStart)
+          headElement.removeEventListener('dragend', this.eventTableDragEnd)
+          headElement.setAttribute('draggable-added', '')
+          break
+        }
       }
     },
 
@@ -531,6 +797,7 @@ export default {
           column['listPosition'] = 0
         }
       }
+      this.removeFieldDragEventListener(field.key || field)
       this.resetCachedColumnFields()
     },
     /**
@@ -549,6 +816,8 @@ export default {
       if ((index = tool.inArray(field, this.cachedFieldModels)) >= 0) {
         this.cachedFieldModels.splice(index, 1)
       }
+      // 移除绑定的监听事件，避免内存泄漏问题
+      this.$refs.parentFormContent.removeFieldDragEventListener(field.key)
       // console.log('删除字段：', 'index = ', index, ', field = ', field)
     },
     /**
@@ -584,7 +853,7 @@ export default {
       this.closeFieldSettings()
       this.cachedFieldModels.push(field)
       this.$nextTick(() => {
-        this.registerDragEventListener()
+        this.$refs.parentFormContent.registerFieldDragEventListener()
       })
     },
     /**
@@ -607,20 +876,29 @@ export default {
       var resortedColumns = []
       var formHeads = this.getHeadLayoutElement()
       for (var fieldElement of formHeads.children) {
-        if (tool.toLower(fieldElement.tagName) === 'th' &&
-             (columnFieldName = fieldElement.getElementsByClassName('form-list-head')) &&
-             columnFieldName.length > 0 &&
-             !tool.isBlank(columnFieldName = columnFieldName[0].getAttribute('form-list-field'))) {
-          resortedColumns.push(columnFieldName)
+        // console.log(fieldElement)
+        if (tool.toLower(fieldElement.tagName) !== 'th') {
+          continue
         }
+        var fieldHeadElm = fieldElement.getElementsByClassName('form-list-head')
+        // console.log(fieldHeadElm)
+        if (!fieldHeadElm || fieldHeadElm.length <= 0) {
+          continue
+        }
+        columnFieldName = fieldHeadElm[0].getAttribute('form-list-field')
+        // console.log(columnFieldName)
+        if (tool.isBlank(columnFieldName)) {
+          continue
+        }
+        resortedColumns.push(columnFieldName)
       }
-      var position = 0
+      // console.log('Resorted columns = ', resortedColumns)
       for (var field of this.cachedFieldModels) {
         field['listPosition'] = 0
-        for (var column of resortedColumns) {
-          if (column === field.key) {
-            position += 10
-            field['listPosition'] = position
+        for (var cidx in resortedColumns) {
+          if ((columnFieldName = resortedColumns[cidx]) === field.key) {
+            field['listPosition'] = (tool.parseInteger(cidx) + 1) * 10
+            // console.log('Update field list position : ', field.key, '(' + cidx + ') => ', field['listPosition'])
             break
           }
         }
@@ -654,5 +932,8 @@ export default {
     padding: 5px 50px;
     text-align: center;
   }
+}
+.el-drawer.form-field-settings {
+  overflow-y: auto !important;
 }
 </style>

@@ -1,37 +1,35 @@
 <template>
   <div class="dynamic-single-selector">
     <el-select
+      ref="selector"
       v-model="value"
       size="mini"
-      :placeholder="'可输入关键词进行动态筛选'"
+      :placeholder="placeholder"
       :clearable="true"
       :filterable="true"
       :loading="loading"
       :remote="true"
+      :disabled="!editable"
+      :multiple="multiple"
       :remote-method="onQueryApply"
       value-key="optionValue"
       @clear="onClear"
       @change="onChange"
       @focus="onFocus"
     >
-      <slot v-for="(opt, optidx) in selectedOptions">
-        <div
-          v-if="opt.optionGroup && opt.optionGroup != 'null:null' && opt.optionGroup !== (selectedOptions[optidx - 1] ? selectedOptions[optidx - 1].optionGroup : '' )"
-          :key="optidx + 1000"
-          class="common-option-group"
-        >
-          {{ opt.optionGroup }}
-        </div>
+      <el-option-group
+        v-for="group in availableOptions"
+        :key="group.label"
+        :label="group.label"
+      >
         <el-option
-          v-if="optionWillBeSelectable(opt)"
-          :key="optidx"
-          :label="opt.optionDisplay"
+          v-for="(opt, idx) in group.options"
+          v-show="checkOptionVisible(opt)"
+          :key="`${idx} - ${opt.optionValue}`"
           :value="opt"
-        >
-          <span style="float: left">{{ opt.optionDisplay }}</span>
-          <!-- <span style="float: right; color: #8492a6; font-size: 13px">{{ opt.optionValue }}</span> -->
-        </el-option>
-      </slot>
+          :label="opt.optionDisplay"
+        />
+      </el-option-group>
     </el-select>
   </div>
 </template>
@@ -59,6 +57,22 @@ export default {
     parentFieldModels: {
       type: Array,
       default: null
+    },
+    multiple: {
+      type: Boolean,
+      default: false
+    },
+    optionIsVisible: {
+      type: Function,
+      default: null
+    },
+    placeholder: {
+      type: String,
+      default: null
+    },
+    editable: {
+      type: Boolean,
+      default: true
     }
   },
   data() {
@@ -66,13 +80,13 @@ export default {
       value: null,
       loading: false,
       formApi: null,
-      selectedOptions: []
+      availableOptions: []
     }
   },
   watch: {
     formName: {
       immediate: true,
-      handler(formName) {
+      handler: function(formName) {
         if (tool.isBlank(formName)) {
           this.formApi = null
           return
@@ -82,17 +96,25 @@ export default {
     },
     fieldModel: {
       immediate: true,
-      handler(fieldModel) {
+      handler: function(fieldModel) {
         this.value = null
-        this.selectedOptions = []
+        this.availableOptions = []
         // console.log('sdddddddddd', fieldModel.value)
         if (fieldModel) {
-          if (tool.isString(fieldModel.value)) {
-            fieldModel.value = { optionValue: fieldModel.value, optionDisplay: fieldModel.value }
-          }
-          if (tool.isPlainObject(fieldModel.value)) {
-            this.setCurrentOptions([fieldModel.value])
+          if (this.multiple) {
+            if (!tool.isArray(fieldModel.value)) {
+              fieldModel.value = [fieldModel.value]
+            }
+            this.setAvailableOptions(fieldModel.value)
             this.value = fieldModel.value
+          } else {
+            if (tool.isString(fieldModel.value)) {
+              fieldModel.value = { optionValue: fieldModel.value, optionDisplay: fieldModel.value }
+            }
+            if (tool.isPlainObject(fieldModel.value)) {
+              this.setAvailableOptions([fieldModel.value])
+              this.value = fieldModel.value
+            }
           }
         }
       }
@@ -136,7 +158,7 @@ export default {
         this.formId,
         params
       ).then((res) => {
-        this.setCurrentOptions(res.data)
+        this.setAvailableOptions(res.data)
         // console.log('动态可选项简单检索结果如下', res.data)
       }).finally(() => {
         this.loading = false
@@ -147,43 +169,73 @@ export default {
      * 多选的场景下仅用于选择，因此无需考虑当前的选择值。
      * @param {Array} options
      */
-    setCurrentOptions(options) {
+    setAvailableOptions(options) {
       if (!tool.isArray(options)) {
         return
       }
-      if (this.fieldModel.type === 'array') {
-        this.selectedOptions = options
-        return
+      var nextAvailableOptions = []
+      if (tool.isArray(this.value || this.fieldModel.value)) {
+        nextAvailableOptions = options
+      } else {
+        if (this.value) {
+          nextAvailableOptions.push(this.value)
+        }
+        for (const option of options) {
+          if (!option) {
+            continue
+          }
+          if (this.value && this.value.optionValue === option.optionValue) {
+            continue
+          }
+          nextAvailableOptions.push(option)
+        }
       }
-      var preSelectedIndx = -1
-      var preOptions = this.selectedOptions
-      if (this.value) {
-        preSelectedIndx = tool.inArray(this.value, preOptions, function(a, b) {
-          return a.optionValue === b.optionValue
+      /* 可用的下拉选项分组 */
+      var optionGroup
+      var oneGroupedOptions
+      var allGroupedOptions = {}
+      for (const option of nextAvailableOptions) {
+        optionGroup = tool.trim(option.optionGroup)
+        if (!(oneGroupedOptions = allGroupedOptions[optionGroup])) {
+          oneGroupedOptions = []
+          allGroupedOptions[optionGroup] = oneGroupedOptions
+        }
+        oneGroupedOptions.push(option)
+      }
+      nextAvailableOptions = []
+      for (optionGroup in allGroupedOptions) {
+        nextAvailableOptions.push({
+          label: optionGroup,
+          options: allGroupedOptions[optionGroup]
         })
       }
-      var selected = preSelectedIndx >= 0 ? preOptions[preSelectedIndx] : null
-      this.selectedOptions = selected ? [selected] : []
-      for (const option of options) {
-        if (!option) {
-          continue
-        }
-        if (selected && selected.optionValue === option.optionValue) {
-          continue
-        }
-        this.selectedOptions.push(option)
-      }
+      // console.log(nextAvailableOptions)
+      this.availableOptions = nextAvailableOptions
+    },
+    /**
+     * 检查待选项是否可见
+     * @param {Object} option
+     */
+    checkOptionVisible(option) {
+      return !tool.isFunction(this.optionIsVisible) ||
+          this.optionIsVisible.call(this.$parent, option)
     },
     onChange(value) {
       this.$emit('change', value)
       this.$forceUpdate()
     },
     onClear() {
-      this.$emit('change', null)
+      this.$emit('clear')
       this.$forceUpdate()
     },
     onFocus() {
       this.onQueryApply('')
+    },
+    blur() {
+      this.$refs.selector.blur()
+    },
+    focus() {
+      this.$refs.selector.focus()
     }
   }
 }

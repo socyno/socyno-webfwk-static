@@ -133,6 +133,36 @@ export function setFieldComponentType(fieldModel) {
 }
 
 /**
+ * 设置字段的默认数据
+ */
+export function setFieldDefaultValue(fieldModel, formData) {
+  var key = fieldModel.key
+  var value = formData[key]
+  if (fieldModel.type === 'array') {
+    value = value || []
+  } else if (fieldModel.type === 'object') {
+    value = value || null
+  } else if (fieldModel.type === 'boolean') {
+    value = tool.isUndefOrNull(value) ? null : !!value
+  } else if (fieldModel.type === 'integer') {
+    value = tool.isUndefOrNull(value) ? null : value
+  } else if (tool.isUndefOrNull(value)) {
+    value = ''
+  }
+  /**
+   * 针对静态可选项，由于后端出来的 StaticOption 的始终是
+   * 字串类型的键值对，因此这里需强制将值转换为字串，否则
+   * 对于以 boolean 或 integer 标识的开关(是/否)类选项将
+   * 无法自动匹配
+   */
+  if (tool.toLower(fieldModel.fieldOptionsType) === 'static' &&
+    (tool.isUndefOrNull(value) || tool.isNumber(value) || tool.isBoolean(value))) {
+    value = tool.stringify(value)
+  }
+  fieldModel.value = value
+}
+
+/**
  * 解析原始的表单数据
  */
 export function parseFormClass(formClass, formData) {
@@ -141,40 +171,31 @@ export function parseFormClass(formClass, formData) {
   }
   formClass = tool.isString(formClass)
     ? JSON.parse(formClass) : tool.jsonCopy(formClass)
-  if (!formClass.properties) {
-    return formClass
-  }
   // console.log('界面模型基本数据结构:', formClass)
   if (!tool.isPlainObject(formData)) {
     formData = {}
-  } else {
-    formData = tool.jsonCopy(formData)
+  }
+  /**
+   * 编辑界面的操作按钮显示配置
+   */
+  formClass.buttonConfirmDisplayName = tool.trim(formClass.customButtonConfirmDisplayName)
+  formClass.buttonCancelDisplayName = tool.trim(formClass.customButtonCancelDisplayName)
+  /**
+   * 表单的验证及变更 js 代码
+   */
+  formClass.formValidation = tool.trim(formClass.customFormValidation)
+  formClass.formDynamicChanged = tool.trim(formClass.customFormDynamicChanged)
+  /**
+   * 表单字段解析和处理
+   */
+  if (!formClass.properties) {
+    return formClass
   }
   for (const key in formClass.properties) {
     var fieldModel = formClass.properties[key]
     fieldModel.key = key
     /* 填充字段的默认值 */
-    var value = formData[key]
-    if (fieldModel.type === 'array') {
-      value = value || []
-    } else if (fieldModel.type === 'object') {
-      value = value || null
-    } else if (fieldModel.type === 'boolean') {
-      value = !!value
-    } else if (tool.isUndef(value)) {
-      value = null
-    }
-    /**
-     * 针对静态可选项，由于后端出来的 StaticOption 的始终是
-     * 字串类型的键值对，因此这里需强制将值转换为字串，否则
-     * 对于以 boolean 或 integer 标识的开关(是/否)类选项将
-     * 无法自动匹配
-     */
-    if (tool.toLower(fieldModel.fieldOptionsType) === 'static' &&
-      (tool.isUndefOrNull(value) || tool.isNumber(value) || tool.isBoolean(value))) {
-      value = tool.stringify(value)
-    }
-    fieldModel.value = value
+    setFieldDefaultValue(fieldModel, formData)
     /* 处理标题相关的配置，显示、宽度、冒号等 */
     fieldModel.title = tool.trim(fieldModel.title)
     if (fieldModel.title.toLowerCase() === '<empty>') {
@@ -214,16 +235,8 @@ export function parseFormClass(formClass, formData) {
     setFieldComponentType(fieldModel)
     /* 处理字段说明信息 */
     fieldModel.description = tool.trim(fieldModel.description)
-    if (!fieldModel.contentip) {
-      var description
-      if ((description = tool.removeOrNull(/^\*+/, fieldModel.description))) {
-        fieldModel.contentip = 'bottom'
-        fieldModel.description = description
-      } else if ((description = tool.removeOrNull(/^\#+/, fieldModel.description))) {
-        fieldModel.contentip = 'top'
-        fieldModel.description = description
-      }
-    }
+    fieldModel.brightHelpTop = tool.trim(fieldModel.customBrightHelpTop)
+    fieldModel.brightHelpBottom = tool.trim(fieldModel.customBrightHelpBottom)
     /* 填充字段的是否必填属性 */
     fieldModel.required = tool.inArray(key, formClass.required) >= 0
     /* 解析嵌套的动态选项值筛选表单 */
@@ -240,13 +253,18 @@ export function parseFormClass(formClass, formData) {
       fieldModel.items = parseFormClass(fieldModel.items)
     }
     /* 格式验证模式处理 */
-    if (!fieldModel.pattern && fieldModel.customPattern) {
-      fieldModel.pattern = fieldModel.customPattern
-    }
+    fieldModel.patternFailureWarn = tool.trim(fieldModel.customPatternFailureWarn)
     /* 自定义显示模板处理 */
-    if (!fieldModel.template && fieldModel.customTemplate) {
-      fieldModel.template = fieldModel.customTemplate
+    fieldModel.template = tool.trim(fieldModel.customTemplate)
+    /* 输入框内的提示语 */
+    fieldModel.placeholder = tool.trim(fieldModel.customPlaceholder)
+    /* 只读控件模式 */
+    fieldModel.readonlyAsEditor = tool.trim(fieldModel.customReadonlyAsEditor).toLowerCase()
+    if (fieldModel.readonlyAsEditor !== 'yes') {
+      fieldModel.readonlyAsEditor = 'no'
     }
+    /* 前端脚本标签清单 */
+    fieldModel.scriptTags = tool.trim(fieldModel.customScriptTags)
   }
   return formClass
 }
@@ -497,6 +515,11 @@ export function getFieldValueDisplay(fieldModel, fieldValue) {
         textDisplay = fieldValue.display || fieldValue.optionDisplay
       }
       break
+    case 'dateTime':
+    case 'datetime':
+    case 'DateTime':
+      textDisplay = tool.remove(/\+\d{2}(:\d{2})?$/, fieldValue)
+      break
     default:
       if (tool.toLower(fieldModel.fieldOptionsType) === 'static') {
         var arrayValue = fieldValue
@@ -517,7 +540,7 @@ export function getFieldValueDisplay(fieldModel, fieldValue) {
         }
         textDisplay = textDisplay.join(',')
       } else if (tool.isBoolean(fieldValue)) {
-        return fieldValue ? '是' : '否'
+        textDisplay = fieldValue ? '是' : '否'
       }
       break
   }
@@ -562,6 +585,9 @@ export function convertOptionToValue(data, asDisplay) {
         return data.optionDisplay
       }
     } else if (data.hasOwnProperty('optionValue')) {
+      if (data['__skip_option_value_convert__']) {
+        return data
+      }
       return data.optionValue
     }
     var valdata = {}

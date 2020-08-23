@@ -4,6 +4,8 @@
 </template>
 <script>
 import laytpl from 'laytpl'
+import { getFieldValueDisplay, setFieldDefaultValue } from '@/utils/formUtils'
+
 export default {
   props: {
     template: {
@@ -27,7 +29,7 @@ export default {
   watch: {
     formData: {
       immediate: true,
-      handler(n, o) {
+      handler: function(n, o) {
         this.initData(n || {})
         this.$forceUpdate()
       }
@@ -36,8 +38,11 @@ export default {
   methods: {
     initData() {
       if (this.template) {
-        var tmpldata = this.fieldModel
+        var tmpldata = {}
+        Object.assign(tmpldata, this.fieldModel)
         tmpldata.data = this.formData
+        setFieldDefaultValue(tmpldata, this.formData)
+        tmpldata.textDisplay = getFieldValueDisplay(tmpldata, tmpldata.value)
         this.innerHTML = laytpl.render(decodeURIComponent(this.template), tmpldata)
       } else {
         this.innerHTML = this.formData

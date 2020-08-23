@@ -25,7 +25,7 @@
             <a target="_blank" :href="`#/form/flowchart/${scope.row.formName}`">流程图</a>
           </el-button>
           <el-button type="text" size="small">
-            <a :href="`#/form/setup/${scope.row.formName}`">设置</a>
+            <a target="_blank" :href="`#/form/setup/${scope.row.formName}`">设置</a>
           </el-button>
           <el-button type="text" size="small" @click="updataClick(scope.row)">
             修改
@@ -36,8 +36,8 @@
         </template>
       </el-table-column>
     </el-table>
-    <el-dialog title="表单操作" :modal-append-to-body="false" :close-on-click-modal="false" :visible.sync="dialogAddVisible" width="700px">
-      <el-form ref="form01" label-position="right" style="width:500px" :rules="addRules" label-width="120px" :inline="false" :model="addParam" class="demo-form-inline">
+    <el-dialog title="流程设置" :modal-append-to-body="false" :close-on-click-modal="false" :visible.sync="dialogAddVisible" width="800px">
+      <el-form ref="form01" label-position="right" style="width:700px" :rules="addRules" label-width="120px" :inline="false" :model="addParam" class="demo-form-inline">
         <el-form-item label="表单名称：" prop="formDisplay">
           <el-input v-model="addParam.formDisplay" placeholder="请输入表单名称" />
         </el-form-item>
@@ -59,6 +59,9 @@
           <el-radio v-model="addParam.disabled" label="1">
             禁用
           </el-radio>
+        </el-form-item>
+        <el-form-item label="显示事件：" prop="visibleActions">
+          <el-input v-model="addParam.visibleActions" placeholder="请输入显示事件(多个可使用逗号,分号或空格分隔), 默认显示所有" />
         </el-form-item>
         <el-form-item label>
           <el-button type="primary" @click="submitForm('form01')">
@@ -121,7 +124,8 @@ export default {
         formName: '',
         formService: '',
         formBackend: '',
-        disabled: '0'
+        disabled: '0',
+        visibleActions: ''
       }
     },
     deleteClick(formName, formKey) {
@@ -183,8 +187,6 @@ export default {
               this.loadDefinedForms()
               this.dialogAddVisible = false
               this.$notify.success('保存成功')
-            }).catch(e => {
-              this.$notify.error('保存失败')
             }).finally(() => {
               loadObj.close()
             })

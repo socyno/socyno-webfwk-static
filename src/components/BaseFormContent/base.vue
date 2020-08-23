@@ -29,7 +29,14 @@
         </slot>
       </div>
       <div v-if="field.comType !== 'separator'" :class="genFieldContentSytle(field)">
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div v-if="field.brightHelpTop" v-html="field.brightHelpTop" />
         <slot name="content" :field="field" :index="index" :editable="editable && !field.readonly" />
+        <div v-show="field.errormsg" class="form-field-required">
+          {{ field.errormsg }}
+        </div>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div v-if="field.brightHelpBottom" v-html="field.brightHelpBottom" />
       </div>
     </div>
     <slot name="after" />
@@ -82,79 +89,156 @@ export default {
   },
   watch: {
     fieldModels: {
-      handler() {
-        this.registerDragEventListener()
+      handler: function() {
+        if (this.draggable) {
+          this.registerFieldDragEventListener()
+        }
       }
     }
   },
   mounted() {
     if (this.draggable) {
-      this.$el.addEventListener('dragenter', (e) => {
-        var sourceField
-        var targetField
-        if (!(targetField = this.getCurrentFieldElement(e.target)) ||
-                !(sourceField = this.fieldDraggedStore.sourceField) ||
-                targetField === sourceField ||
-                !targetField.draggable ||
-                targetField === this.fieldDraggedStore.targetFeild) {
-          return
-        }
-        this.resetPrevDropTargetStyle(targetField)
-      })
-      this.$el.addEventListener('dragover', (e) => {
-        e.preventDefault()
-        var sourceField
-        var targetField
-        if (!(targetField = this.getCurrentFieldElement(e.target)) ||
-                !(sourceField = this.fieldDraggedStore.sourceField) ||
-                !targetField.draggable ||
-                targetField === sourceField) {
-          return
-        }
-        this.resetPrevDropTargetStyle()
-        var targetRect = this.getFieldElementRectInfo(targetField)
-        var vClientCenter = (targetRect.bottom - targetRect.top) / 2 + targetRect.top
-        var hClientCenter = (targetRect.right - targetRect.left) / 2 + targetRect.left
-        if (e.clientX > hClientCenter || e.clientY > vClientCenter) {
-          targetField.style.borderRight = '3px dotted green'
-          targetField.style.borderBottom = '3px dotted green'
-          this.fieldDraggedStore['targetDirection'] = 'after'
-        } else {
-          targetField.style.borderTop = '3px dotted green'
-          targetField.style.borderLeft = '3px dotted green'
-          this.fieldDraggedStore['targetDirection'] = 'before'
-        }
-      })
-      this.$el.addEventListener('drop', (e) => {
-        e.preventDefault()
-        var targetField
-        var sourceField
-        this.resetPrevDropTargetStyle()
-        if (!(targetField = this.fieldDraggedStore.targetFeild) ||
-            !(sourceField = this.fieldDraggedStore.sourceField) ||
-            targetField === sourceField) {
-          return
-        }
-        if (this.fieldDraggedStore.targetDirection === 'after') {
-          targetField.after(sourceField)
-        } else {
-          targetField.before(sourceField)
-        }
-        var fieldName
-        var resortedFields = []
-        for (var fieldElement of this.$el.children) {
-          fieldName = fieldElement.getAttribute('form-field-key')
-          if (tool.isBlank(fieldName)) {
-            continue
-          }
-          resortedFields.push(fieldName)
-        }
-        this.$emit('fieldOrderChange', resortedFields)
-      })
-      this.registerDragEventListener()
+      this.$el.addEventListener('dragenter', this.eventFormDragEnter)
+      this.$el.addEventListener('dragover', this.eventFromDragOver)
+      this.$el.addEventListener('drop', this.eventFromDragDrop)
+      this.registerFieldDragEventListener()
     }
   },
+
+  beforeDestroy() {
+    this.removeFieldDragEventListener()
+    this.$el.removeEventListener('drop', this.eventFromDragDrop)
+    this.$el.removeEventListener('dragover', this.eventFromDragOver)
+    this.$el.removeEventListener('dragenter', this.eventFormDragEnter)
+  },
+
   methods: {
+
+    eventFormDragEnter(e) {
+      var sourceField
+      var targetField
+      if (!(targetField = this.getCurrentFieldElement(e.target)) ||
+              !(sourceField = this.fieldDraggedStore.sourceField) ||
+              targetField === sourceField ||
+              !targetField.draggable ||
+              targetField === this.fieldDraggedStore.targetFeild) {
+        return
+      }
+      this.resetPrevDropTargetStyle(targetField)
+    },
+
+    eventFromDragOver(e) {
+      e.preventDefault()
+      var sourceField
+      var targetField
+      if (!(targetField = this.getCurrentFieldElement(e.target)) ||
+              !(sourceField = this.fieldDraggedStore.sourceField) ||
+              !targetField.draggable ||
+              targetField === sourceField) {
+        return
+      }
+      // console.log('DrogOver: source field = ', sourceField.getAttribute('form-field-key'))
+      // console.log('DrogOver: hover  field = ', targetField.getAttribute('form-field-key'))
+      // console.log('DrogOver: target field = ', this.fieldDraggedStore.targetFeild.getAttribute('form-field-key'))
+      this.resetPrevDropTargetStyle()
+      var targetRect = this.getFieldElementRectInfo(targetField)
+      // var vClientCenter = (targetRect.bottom - targetRect.top) / 2 + targetRect.top
+      var hClientCenter = (targetRect.right - targetRect.left) / 2 + targetRect.left
+      // if (e.clientX > hClientCenter || e.clientY > vClientCenter) {
+      if (e.clientX > hClientCenter) {
+        targetField.style.borderRight = '3px dotted green'
+        targetField.style.borderBottom = '3px dotted green'
+        this.fieldDraggedStore['targetDirection'] = 'after'
+      } else {
+        targetField.style.borderTop = '3px dotted green'
+        targetField.style.borderLeft = '3px dotted green'
+        this.fieldDraggedStore['targetDirection'] = 'before'
+      }
+    },
+
+    eventFromDragDrop(e) {
+      e.preventDefault()
+      var targetField
+      var sourceField
+      this.resetPrevDropTargetStyle()
+      if (!(targetField = this.fieldDraggedStore.targetFeild) ||
+          !(sourceField = this.fieldDraggedStore.sourceField) ||
+          targetField === sourceField) {
+        return
+      }
+      if (this.fieldDraggedStore.targetDirection === 'after') {
+        tool.propAfter(targetField).after(sourceField)
+      } else {
+        tool.propBefore(targetField).before(sourceField)
+      }
+      var fieldName
+      var resortedFields = []
+      for (var fieldElement of this.$el.children) {
+        fieldName = fieldElement.getAttribute('form-field-key')
+        if (tool.isBlank(fieldName)) {
+          continue
+        }
+        resortedFields.push(fieldName)
+      }
+      this.$emit('fieldOrderChange', resortedFields)
+    },
+
+    eventFieldDragStart(e) {
+      var sourceField
+      if (!(sourceField = this.getCurrentFieldElement(e.target))) {
+        return
+      }
+      this.fieldDraggedStore = {
+        sourceField: sourceField,
+        sourceBorder: sourceField.style.border
+      }
+      sourceField.style.border = '1px dotted red'
+    },
+
+    eventFieldDragEnd(e) {
+      this.fieldDraggedStore.sourceField.style.border =
+            this.fieldDraggedStore.sourceBorder
+      this.resetPrevDropTargetStyle()
+      this.fieldDraggedStore = {}
+    },
+
+    /**
+     * 注册字段拖拽事件
+     */
+    registerFieldDragEventListener() {
+      var foundField = null
+      for (var fieldElement of this.$el.children) {
+        if (tool.isBlank(foundField = fieldElement.getAttribute('form-field-key'))) {
+          continue
+        }
+        if (tool.isBlank(fieldElement.getAttribute('draggable-added'))) {
+          console.log('Registering Field DragEventListener ... ', foundField)
+          fieldElement.draggable = true
+          fieldElement.addEventListener('dragstart', this.eventFieldDragStart)
+          fieldElement.addEventListener('dragend', this.eventFieldDragEnd)
+          fieldElement.setAttribute('draggable-added', 'true')
+        }
+      }
+    },
+
+    /**
+     * 销毁字段拖拽事件
+     */
+    removeFieldDragEventListener(feildKey) {
+      var foundField = null
+      for (var fieldElement of this.$el.children) {
+        if (tool.isBlank(foundField = fieldElement.getAttribute('form-field-key'))) {
+          continue
+        }
+        if (tool.isBlank(feildKey) || foundField === feildKey) {
+          console.log('Removing Field DragEventListener ... ', foundField)
+          fieldElement.removeEventListener('dragend', this.eventFieldDragEnd)
+          fieldElement.removeEventListener('dragstart', this.eventFieldDragStart)
+          fieldElement.setAttribute('draggable-added', '')
+        }
+      }
+    },
+
     /**
      *  获取当前 DOM 对象所在字段的 DOM 对象
      */
@@ -182,38 +266,6 @@ export default {
         right: clientRect.right - clientLeft,
         width: clientRect.width,
         height: clientRect.height
-      }
-    },
-
-    /**
-     * 注册字段拖拽事件
-     */
-    registerDragEventListener() {
-      for (var fieldElement of this.$el.children) {
-        if (tool.isBlank(fieldElement.getAttribute('form-field-key'))) {
-          continue
-        }
-        if (!tool.isBlank(fieldElement.getAttribute('draggable-added'))) {
-          continue
-        }
-        fieldElement.addEventListener('dragstart', (e) => {
-          var sourceField
-          if (!(sourceField = this.getCurrentFieldElement(e.target))) {
-            return
-          }
-          this.fieldDraggedStore = {
-            sourceField: sourceField,
-            sourceBorder: sourceField.style.border
-          }
-          sourceField.style.border = '1px dotted red'
-        })
-        fieldElement.addEventListener('dragend', (e) => {
-          this.fieldDraggedStore.sourceField.style.border =
-                this.fieldDraggedStore.sourceBorder
-          this.resetPrevDropTargetStyle()
-          this.fieldDraggedStore = {}
-        })
-        fieldElement.setAttribute('draggable-added', 'true')
       }
     },
 
@@ -249,6 +301,9 @@ export default {
      * 计算当前字段是否超过一行
      */
     checkFieldVisible(field) {
+      if (field && field.tmpHidden) {
+        return false
+      }
       if (this.collapsibleExpand) {
         return true
       }
@@ -284,7 +339,7 @@ export default {
      */
     genFieldLabelSytle(field) {
       var clazz = 'form-field-title'
-      if (field.required) {
+      if (this.showFieldErrorMsg(field)) {
         clazz += ' form-field-required'
       }
       var titleWidth = tool.trim(field.titleWidth)
@@ -292,6 +347,45 @@ export default {
         clazz += ' form-field-title-' + titleWidth
       }
       return clazz
+    },
+
+    /**
+     * 计算字段的错误信息, 并返回是否存在错误
+     */
+    showFieldErrorMsg(field) {
+      if (!this.editable) {
+        field.errormsg = ''
+        return false
+      }
+      if (field.required) {
+        if (tool.isUndefOrNull(field.value) ||
+          (field.type === 'array' && field.value.length <= 0) ||
+          (tool.isString(field.value) && tool.isBlank(field.value))) {
+          field.errormsg = '必填项, 请按要求填写'
+          return true
+        }
+      }
+      if (field.pattern && !tool.isEmpty(field.value) &&
+            (tool.isNumber(field.value) || tool.isString(field.value))
+      ) {
+        var regexp
+        try {
+          regexp = new RegExp(field.pattern)
+        } catch (e) {
+          field.errormsg = '验证失败, 非法的正则模式'
+          return true
+        }
+        if (!regexp.test(field.value.toString())) {
+          if (!tool.isBlank(field.patternFailureWarn)) {
+            field.errormsg = `验证失败, ${field.patternFailureWarn}`
+            return true
+          }
+          field.errormsg = `验证失败, 要求的正则模式为 - ${field.pattern}`
+          return true
+        }
+      }
+      field.errormsg = ''
+      return false
     },
 
     /**

@@ -68,15 +68,23 @@ export default {
   },
   mounted() {
     this.loadData()
-    var that = this
-    window.addEventListener('message', function(event) {
-      if (event.data === 'close-approval-frame') {
-        that.dialogVisible = false
-        that.loadData()
-      }
-    }, false)
+    window.addEventListener('message', this.eventMessage)
+  },
+  destroyed() {
+    window.removeEventListener('message', this.eventMessage)
   },
   methods: {
+    /**
+     * 代办内外交互处理事件
+     * @param {Object} event
+     */
+    eventMessage(event) {
+      if (event.data === 'close-approval-frame') {
+        this.dialogVisible = false
+        this.loadData()
+      }
+    },
+
     iframeLoaded() {
       var that = this
       var myFrame = document.getElementsByClassName('html-iframe')[0]

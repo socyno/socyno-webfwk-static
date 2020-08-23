@@ -22,7 +22,11 @@
             <TemplateConfig :template="column.template" :field-model="column" :form-data="value[scope.$index]" />
           </template>
         </el-table-column>
-        <el-table-column v-else :key="`${column.key}-${idx}`" :formatter="columnFormatter" :label="column.title" :prop="column.key" />
+        <el-table-column v-else :key="`${column.key}-${idx}`" :label="column.title" :prop="column.key">
+          <template slot-scope="scope">
+            {{ getFieldValueDisplay(column, scope.row[column.key]) }}
+          </template>
+        </el-table-column>
       </slot>
       <el-table-column v-if="editable" label="操作">
         <template slot-scope="scope">
@@ -40,8 +44,8 @@
 <script>
 import tool from '@/utils/tools'
 import BaseFormEditor from '@/components/BaseFormEditor'
-import { getFieldValueDisplay, getVisibleFieldModels } from '@/utils/formUtils'
 import TemplateConfig from '@/components/BaseFormItem/TemplateConfig'
+import { getFieldValueDisplay, getVisibleFieldModels, FORM_FIELD_OPTIONS } from '@/utils/formUtils'
 export default {
   name: 'DynamicValueCreator',
   components: {
@@ -69,7 +73,7 @@ export default {
     },
     formName: {
       type: String,
-      default: null
+      required: true
     },
     parentFieldModels: {
       type: Array,
@@ -86,19 +90,20 @@ export default {
   watch: {
     fieldModel: {
       immediate: true,
-      handler(fieldModel) {
-        if (!fieldModel || !fieldModel.listItemCreationFormClass) {
+      handler: function(fieldModel) {
+        if (!fieldModel) {
           return
         }
-        this.curentCreationFormColumns = getVisibleFieldModels(fieldModel.listItemCreationFormClass)
+        this.curentCreationFormColumns = []
+        if (fieldModel.listItemCreationFormClass) {
+          this.curentCreationFormColumns = getVisibleFieldModels(
+            fieldModel.listItemCreationFormClass,
+            FORM_FIELD_OPTIONS.ListFirst |
+              FORM_FIELD_OPTIONS.OrderUndefinedExcluded
+          )
+        }
       }
     }
-    // , parentFieldModels: {
-    //   immediate: true,
-    //   handler(newValue) {
-    //     console.log('字段项动态创建接收的父表单数据模型为：', newValue)
-    //   }
-    // }
   },
   methods: {
     /**
@@ -152,22 +157,13 @@ export default {
       // console.log('动态添加项存储添加完成：', this.value)
       this.$emit('input', this.value)
     },
-
     /**
-     * 列表格式化
-     * @param {Object} row
-     * @param {Object} column
-     * @param {Object} cellValue
-     * @param {Object} index
+     * 格式化字段的显示文本
+     * @param {Object} fieldModel
+     * @param {Object} fieldValue
      */
-    columnFormatter(row, column, cellValue, index) {
-      var fieldIndex = tool.inArray(column.property, this.curentCreationFormColumns, function(a, b) {
-        return a.key === b
-      })
-      // console.log('列表格式化，当前的列号为：', fieldIndex)
-      // console.log('列表格式化，当前的数据为', cellValue)
-      var fieldModel = this.curentCreationFormColumns[fieldIndex]
-      return getFieldValueDisplay(fieldModel, cellValue)
+    getFieldValueDisplay(fieldModel, fieldValue) {
+      return getFieldValueDisplay(fieldModel, fieldValue)
     }
   }
 }
